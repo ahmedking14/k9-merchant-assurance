@@ -45,6 +45,7 @@ function saveFields(){
   $$('[data-failure]').forEach(input=>{config.failures[input.dataset.failure]=input.checked});
   storeConfig(config);
   $('#probeMetric').textContent=String(Object.values(config.failures).filter(Boolean).length).padStart(2,'0');
+  $('#shopperMetric').textContent=String(config.swarmSize).padStart(2,'0');
   $('.promise-box strong').textContent=`“${config.offerCopy}”`;
 }
 
