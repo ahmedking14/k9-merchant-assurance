@@ -1,4 +1,4 @@
-import { products, personas, failureTypes, defaults, loadConfig, storeConfig, evaluateShopper, money } from './shared.js';
+import { products, personas, failureTypes, defaults, loadConfig, storeConfig, evaluateShopper, extractClaims, money } from './shared.js';
 
 let config=loadConfig();
 let plannerReady=false;
@@ -32,6 +32,12 @@ function populateFields(){
   $('#freeShipping').value=config.freeShipping;
   $('#priceShift').value=config.priceShift;
   $('#swarmSize').value=String(config.swarmSize);
+  renderClaims();
+}
+
+function renderClaims(){
+  const claims=extractClaims(config,'B');
+  $('#claimReadout').innerHTML=`<span class="eyebrow">COPY → CHECKABLE CLAIMS</span><div><b>${claims.discountPercent}%</b><small>first-order offer</small></div><div><b>${money(claims.freeShippingThreshold)}</b><small>free shipping above</small></div><div><b>${claims.warrantyYears} yr</b><small>variant B warranty claim</small></div><div><b>${claims.returnDays} days</b><small>return window</small></div>`;
 }
 
 function saveFields(){
@@ -47,6 +53,7 @@ function saveFields(){
   $('#probeMetric').textContent=String(Object.values(config.failures).filter(Boolean).length).padStart(2,'0');
   $('#shopperMetric').textContent=String(config.swarmSize).padStart(2,'0');
   $('.promise-box strong').textContent=`“${config.offerCopy}”`;
+  renderClaims();
 }
 
 function defaultPlans(){return personas.map(persona=>({personaId:persona.id,productId:persona.defaultProduct,intent:persona.goal,reason:persona.blurb}));}

@@ -36,6 +36,13 @@ export const defaults = {
 
 export const money = value => `$${Number(value).toFixed(2)}`;
 
+export function extractClaims(config,variant='A'){
+  const discountPercent=Number(config.offerCopy.match(/(\d+(?:\.\d+)?)\s*%/)?.[1] ?? config.discount);
+  const warrantyText=variant==='B'?config.variantCopy:'Two-year warranty';
+  const warrantyYears=/\b(?:one|1)[ -]?year\b/i.test(warrantyText)?1:/\b(?:two|2)[ -]?year\b/i.test(warrantyText)?2:2;
+  return {discountPercent,freeShippingThreshold:Number(config.freeShipping),warrantyYears,returnDays:30};
+}
+
 export function loadConfig(){
   try { const saved=JSON.parse(localStorage.getItem('swarm-store-config')||'null'); return {...defaults,...saved,failures:{...defaults.failures,...saved?.failures}}; }
   catch { return structuredClone(defaults); }
@@ -58,17 +65,16 @@ export function evaluateShopper(persona, product, variant, config){
   const outcome=cartOutcome(product,variant,config);
   const active=variant==='B'?config.failures:{};
   const checks=[];
-  const printedRate=Number(config.offerCopy.match(/(\d+(?:\.\d+)?)\s*%/)?.[1] ?? config.discount);
+  const claims=extractClaims(config,variant);
+  const printedRate=claims.discountPercent;
   const expectedDiscount=Math.round(outcome.cartPrice*printedRate)/100;
   if(persona.checks.includes('discountBreak')) checks.push({name:'Promised discount',pass:Math.abs(outcome.discount-expectedDiscount)<0.01,detail:Math.abs(outcome.discount-expectedDiscount)<0.01?`${printedRate}% applied`:`Claimed ${printedRate}%, received ${money(outcome.discount)} off`});
   if(persona.checks.includes('couponEligibility') && active.couponEligibility) checks.push({name:'Offer eligibility',pass:outcome.discountEligible,detail:outcome.discountEligible?'Product eligible':'Hidden exclusion'});
   if(persona.checks.includes('dynamicPricing')) checks.push({name:'Price consistency',pass:outcome.cartPrice===outcome.shelfPrice,detail:outcome.cartPrice===outcome.shelfPrice?'Shelf price held':`${money(outcome.shelfPrice)} became ${money(outcome.cartPrice)}`});
-  if(persona.checks.includes('shippingThreshold')) checks.push({name:'Free shipping',pass:outcome.shippingThreshold===Number(config.freeShipping),detail:outcome.shippingThreshold===Number(config.freeShipping)?'Threshold held':`Threshold moved to ${money(outcome.shippingThreshold)}`});
-  if(persona.checks.includes('returnPolicy')) checks.push({name:'Return promise',pass:outcome.returnDays===30,detail:`${outcome.returnDays}-day returns at checkout`});
+  if(persona.checks.includes('shippingThreshold')) checks.push({name:'Free shipping',pass:outcome.shippingThreshold===claims.freeShippingThreshold,detail:outcome.shippingThreshold===claims.freeShippingThreshold?'Threshold held':`Threshold moved to ${money(outcome.shippingThreshold)}`});
+  if(persona.checks.includes('returnPolicy')) checks.push({name:'Return promise',pass:outcome.returnDays===claims.returnDays,detail:`${outcome.returnDays}-day returns at checkout`});
   if(persona.checks.includes('copyDrift')){
-    const claim=variant==='B'?config.variantCopy:'Two-year warranty';
-    const claimedYears=/\b(?:one|1)[ -]?year\b/i.test(claim)?1:/\b(?:two|2)[ -]?year\b/i.test(claim)?2:2;
-    checks.push({name:'Warranty copy',pass:outcome.warrantyYears===claimedYears,detail:`Claimed ${claimedYears} years, checkout shows ${outcome.warrantyYears}`});
+    checks.push({name:'Warranty copy',pass:outcome.warrantyYears===claims.warrantyYears,detail:`Claimed ${claims.warrantyYears} years, checkout shows ${outcome.warrantyYears}`});
   }
   if(persona.checks.includes('stockMismatch')) checks.push({name:'Availability',pass:outcome.inStock,detail:outcome.inStock?'In stock':'Sold out in cart'});
   return {personaId:persona.id, productId:product.id, variant, pass:checks.every(check=>check.pass), checks, outcome};
