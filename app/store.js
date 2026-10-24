@@ -13,7 +13,7 @@ $('#variantBadge').textContent=variant==='B'?'CHALLENGER B':'CONTROL A';
 $('#variantBadge').classList.toggle('b',variant==='B');
 if(variant==='B')document.querySelector('.value-strip strong').textContent=config.variantCopy;
 
-$('#productGrid').innerHTML=products.map(product=>`<article class="product"><div class="product-image"><img loading="lazy" src="${product.image}" alt="Photograph representing ${product.name}"/><button type="button" data-add="${product.id}">Add to bag <span>↗</span></button></div><div class="product-info"><span>${product.category}</span><div><strong>${product.name}</strong><b>${money(product.price)}</b></div><p>${product.detail}</p></div></article>`).join('');
+$('#productGrid').innerHTML=products.map(product=>`<article class="product"><div class="product-image"><img loading="lazy" src="${product.image}" alt="Photograph representing ${product.name}"/><button type="button" data-add="${product.id}">Add to bag <span>↗</span></button></div><div class="product-info"><span>${product.category} · IN STOCK</span><div><strong>${product.name}</strong><b>${money(product.price)}</b></div><p>${product.detail}</p></div></article>`).join('');
 
 function openCart(){ $('#cartDrawer').classList.add('open');$('#cartDrawer').setAttribute('aria-hidden','false');$('#scrim').hidden=false; }
 function closeCart(){ $('#cartDrawer').classList.remove('open');$('#cartDrawer').setAttribute('aria-hidden','true');$('#scrim').hidden=true; }

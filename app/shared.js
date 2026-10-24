@@ -58,12 +58,18 @@ export function evaluateShopper(persona, product, variant, config){
   const outcome=cartOutcome(product,variant,config);
   const active=variant==='B'?config.failures:{};
   const checks=[];
-  if(persona.checks.includes('discountBreak')) checks.push({name:'Promised discount',pass:outcome.discount>0,detail:outcome.discount>0?`${config.discount}% applied`:'Offer dropped in cart'});
+  const printedRate=Number(config.offerCopy.match(/(\d+(?:\.\d+)?)\s*%/)?.[1] ?? config.discount);
+  const expectedDiscount=Math.round(outcome.cartPrice*printedRate)/100;
+  if(persona.checks.includes('discountBreak')) checks.push({name:'Promised discount',pass:Math.abs(outcome.discount-expectedDiscount)<0.01,detail:Math.abs(outcome.discount-expectedDiscount)<0.01?`${printedRate}% applied`:`Claimed ${printedRate}%, received ${money(outcome.discount)} off`});
   if(persona.checks.includes('couponEligibility') && active.couponEligibility) checks.push({name:'Offer eligibility',pass:outcome.discountEligible,detail:outcome.discountEligible?'Product eligible':'Hidden exclusion'});
   if(persona.checks.includes('dynamicPricing')) checks.push({name:'Price consistency',pass:outcome.cartPrice===outcome.shelfPrice,detail:outcome.cartPrice===outcome.shelfPrice?'Shelf price held':`${money(outcome.shelfPrice)} became ${money(outcome.cartPrice)}`});
   if(persona.checks.includes('shippingThreshold')) checks.push({name:'Free shipping',pass:outcome.shippingThreshold===Number(config.freeShipping),detail:outcome.shippingThreshold===Number(config.freeShipping)?'Threshold held':`Threshold moved to ${money(outcome.shippingThreshold)}`});
   if(persona.checks.includes('returnPolicy')) checks.push({name:'Return promise',pass:outcome.returnDays===30,detail:`${outcome.returnDays}-day returns at checkout`});
-  if(persona.checks.includes('copyDrift')) checks.push({name:'Warranty copy',pass:outcome.warrantyYears===2,detail:`${outcome.warrantyYears}-year warranty at checkout`});
+  if(persona.checks.includes('copyDrift')){
+    const claim=variant==='B'?config.variantCopy:'Two-year warranty';
+    const claimedYears=/\b(?:one|1)[ -]?year\b/i.test(claim)?1:/\b(?:two|2)[ -]?year\b/i.test(claim)?2:2;
+    checks.push({name:'Warranty copy',pass:outcome.warrantyYears===claimedYears,detail:`Claimed ${claimedYears} years, checkout shows ${outcome.warrantyYears}`});
+  }
   if(persona.checks.includes('stockMismatch')) checks.push({name:'Availability',pass:outcome.inStock,detail:outcome.inStock?'In stock':'Sold out in cart'});
   return {personaId:persona.id, productId:product.id, variant, pass:checks.every(check=>check.pass), checks, outcome};
 }
