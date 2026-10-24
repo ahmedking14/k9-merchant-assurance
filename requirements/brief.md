@@ -1,4 +1,4 @@
-# Swarm vs. Store requirements
+# K9 requirements
 
 The product is a web app. It uses a realistic demo electronics store with real product photographs and a believable fictional brand.
 

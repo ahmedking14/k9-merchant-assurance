@@ -1,4 +1,4 @@
-# Swarm vs. Store
+# K9
 
 A Kane CLI Hack Day project: simulated shoppers challenge a specific storefront promise, and Kane can verify the real browser journey.
 
