@@ -1,0 +1,27 @@
+{
+  "capturedAt": "2026-10-24T23:10:28.560Z",
+  "status": "failed",
+  "executionId": "79282ac6-9e96-4cfe-a52f-75f3d25339a2",
+  "evidencePack": ".testmuai/evidence/79282ac6-9e96-4cfe-a52f-75f3d25339a2.evidence",
+  "coverage": {
+    "status": "written",
+    "pct": 9
+  },
+  "members": [
+    {
+      "test": "challenger-cart-exposes-missing-first-order-discount_test.md",
+      "status": "failed",
+      "sessionId": "ca3e53e1-08f0-4cbd-bb23-e533b9ecb657",
+      "failure": "AP determined agent is stuck — no viable actions remain",
+      "failureKind": "automation"
+    },
+    {
+      "test": "control-cart-honors-first-order-discount_test.md",
+      "status": "passed",
+      "sessionId": "a2d8eaaa-6ceb-4ac6-9810-a93a63bef0aa",
+      "failure": null,
+      "failureKind": null
+    }
+  ],
+  "failedAssertions": []
+}

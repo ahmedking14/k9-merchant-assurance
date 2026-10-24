@@ -1,4 +1,7 @@
 import { products, personas, failureTypes, defaults, loadConfig, storeConfig, evaluateShopper, extractClaims, money } from './shared.js';
+import { initReports, refreshReport } from './reports.js';
+import { initKaneReport } from './kane-report.js';
+import { initAssurance, refreshAssurance } from './assurance.js';
 
 let config=loadConfig();
 let plannerReady=false;
@@ -12,7 +15,29 @@ function showView(name){
   $$('.view').forEach(view=>view.classList.toggle('active',view.id===`view-${name}`));
   $$('.nav-item').forEach(item=>item.classList.toggle('active',item.dataset.view===name));
   $('#breadcrumb').textContent=name.toUpperCase().replace('-',' ');
+  if(name==='evidence'){refreshReport({updateInputs:true});refreshAssurance();}
   window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function simulationEvents(rows, plans, variant) {
+  const checkTargets={'Promised discount':'#cartFooter .cart-line.discount','Offer eligibility':'#cartFooter .cart-line.discount','Price consistency':'.cart-product b','Free shipping':'.cart-promises','Return promise':'.cart-promises','Warranty copy':'.cart-promises','Availability':'.cart-promises'};
+  return rows.flatMap(row => {
+    const sessionId=crypto.randomUUID();
+    const persona=personas.find(item=>item.id===row.personaId);
+    const product=products.find(item=>item.id===row.productId);
+    const timestamp=new Date().toISOString();
+    const common={sessionId,source:'simulated',variant,personaId:persona?.name||row.personaId,productId:row.productId,timestamp};
+    const create=(eventType,step,element,detail,pageUrl)=>({...common,eventType,step,element,detail,pageUrl});
+    const failed=row.checks.filter(check=>!check.pass);
+    return [
+      create('session_start',0,'journey',plans.find(plan=>plan.personaId===row.personaId)?.intent||'', '/store.html?variant='+variant),
+      create('claim_view',1,'#offerCopy',config.offerCopy,'/store.html?variant='+variant),
+      create('product_view',2,`[data-product="${row.productId}"]`,product?.name||'', '/store.html?variant='+variant+'#products'),
+      create('add_to_cart',3,'[data-add]',product?.name||'', '/store.html?variant='+variant+'#products'),
+      create('checkout_review',4,'#cartDrawer',`Total ${money(row.outcome.total)}`,'/store.html?variant='+variant),
+      ...(failed.length ? failed.map((check,offset)=>create('claim_mismatch',5+offset,checkTargets[check.name]||'#cartDrawer',`${check.name}: ${check.detail}`,'/store.html?variant='+variant)) : [create('claim_match',5,'#cartDrawer','All assigned promise checks passed','/store.html?variant='+variant)])
+    ];
+  });
 }
 
 function renderFailures(){
@@ -77,6 +102,7 @@ function renderRun(){
   $('#resultsContent').hidden=false;
   $('#runMode').textContent=source.toUpperCase();
   $('#passMetric').textContent=`${sb.rate}%`;
+  $('.experiment-summary .status-pill').textContent='RUN COMPLETE';
   $('#passMetricNote').innerHTML=`challenger promise kept <b>↗</b>`;
   const renderColumn=(label,code,rows,summary)=>`<article class="result-column"><span class="variant-tag ${code==='A'?'control':'challenger'}">${code}</span><h3>${label}</h3><strong class="big">${summary.rate}%</strong><small>${summary.passed} of ${summary.total} shopper runs cleared their promise checks</small><div class="result-list">${personas.map(persona=>{const group=rows.filter(row=>row.personaId===persona.id);const passes=group.filter(row=>row.pass).length;const failed=group.find(row=>!row.pass)?.checks.find(check=>!check.pass);return `<div><span>${persona.name}</span><b class="${passes===group.length?'pass':'fail'}">${passes}/${group.length} ${failed?escapeHtml(failed.detail):'pass'}</b></div>`}).join('')}</div></article>`;
   $('#resultsContent').innerHTML=`<div class="result-banner">${renderColumn('Control A','A',a,sa)}${renderColumn('Challenger B','B',b,sb)}</div><p class="result-explainer">${escapeHtml(source)} selected shopper intents. The local evaluator calculated store outcomes; this is not a Kane CLI browser run. Open the store and run Kane separately for independent evidence.</p>`;
@@ -97,6 +123,11 @@ async function runSwarm(button){
   const b=cohort.map(({persona,product})=>evaluateShopper(persona,product,'B',config));
   lastRun={a,b,plans,source:config.swarmSize>5?`${source} · deterministic cohort expansion`:source,time:new Date().toISOString()};
   localStorage.setItem('swarm-last-run',JSON.stringify(lastRun));
+  try {
+    await fetch('/api/telemetry/events',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({events:[...simulationEvents(a,plans,'A'),...simulationEvents(b,plans,'B')]})});
+    refreshReport({updateInputs:true});
+    refreshAssurance();
+  } catch { /* Results still work if telemetry storage is unavailable. */ }
   setTimeout(()=>{$$('.primary-button').forEach(item=>{item.disabled=false;item.innerHTML=item.dataset.original});renderRun()},400);
 }
 
@@ -113,10 +144,12 @@ async function checkPlanner(){
 }
 
 function init(){
-  populateFields();renderFailures();renderPersonas();checkPlanner();
+  populateFields();renderFailures();renderPersonas();checkPlanner();initReports();initKaneReport();initAssurance();
+  document.addEventListener('pointerup',event=>{const target=event.target.closest('button');if(!target||target.disabled)return;target.classList.remove('settle-pulse');void target.offsetWidth;target.classList.add('settle-pulse');setTimeout(()=>target.classList.remove('settle-pulse'),450)});
   $$('.nav-item').forEach(button=>button.addEventListener('click',()=>showView(button.dataset.view)));
   $$('[data-jump]').forEach(button=>button.addEventListener('click',()=>showView(button.dataset.jump)));
   ['heroRun','experimentRun','shopperRun'].forEach(id=>$('#'+id).addEventListener('click',runSwarm));
+  $('#focusDemo').addEventListener('click',event=>{config=structuredClone(defaults);populateFields();renderFailures();runSwarm(event.currentTarget);});
   $$('#view-experiment input,#view-experiment textarea,#view-experiment select').forEach(input=>input.addEventListener('change',saveFields));
   $$('.segmented button').forEach(button=>button.addEventListener('click',()=>setPreview(button.dataset.preview)));
   const savedReport=localStorage.getItem('swarm-kane-report');if(savedReport){$('#kaneReport').value=savedReport;$('#kaneLink').href=savedReport;$('#kaneLink').hidden=false;$('#kaneStatus').textContent='LINK SAVED';}

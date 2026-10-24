@@ -6,3 +6,12 @@ dist/
 *.log
 launch/
 *.evidence
+data/
+reports/*.ndjson
+reports/*.log
+.testmuai/output-*/
+output-*/
+.testmuai/evidence/
+.testmuai/variables/
+# kane-cli context store: shared through a location, never merged with git
+.context/

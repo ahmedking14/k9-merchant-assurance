@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "node server.mjs",
     "start": "node server.mjs",
-    "check": "node scripts/smoke.mjs"
+    "check": "node scripts/smoke.mjs && node scripts/telemetry-check.mjs"
   },
-  "engines": { "node": ">=18" }
+  "engines": {
+    "node": ">=18"
+  }
 }

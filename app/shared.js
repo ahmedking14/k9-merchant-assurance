@@ -1,8 +1,8 @@
 export const products = [
-  { id:'headphones', name:'Halo Wireless Headphones', category:'PERSONAL AUDIO', price:189, image:'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=1100&q=85', detail:'Immersive sound. Everyday quiet.' },
-  { id:'speaker', name:'Pulse Portable Speaker', category:'HOME AUDIO', price:129, image:'https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?w=1100&q=85', detail:'Big sound, small footprint.' },
-  { id:'watch', name:'Orbit Smartwatch', category:'WEARABLES', price:219, image:'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=1100&q=85', detail:'A clearer view of every day.' },
-  { id:'camera', name:'Pocket Digital Camera', category:'CAMERAS', price:249, image:'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=1100&q=85', detail:'The moments you keep.' }
+  { id:'headphones', name:'Halo Wireless Headphones', category:'PERSONAL AUDIO', price:189, image:'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=1800&q=88', detail:'Immersive sound. Everyday quiet.' },
+  { id:'speaker', name:'Pulse Portable Speaker', category:'HOME AUDIO', price:129, image:'https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?w=1800&q=88', detail:'Big sound, small footprint.' },
+  { id:'watch', name:'Orbit Smartwatch', category:'WEARABLES', price:219, image:'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=1800&q=88', detail:'A clearer view of every day.' },
+  { id:'camera', name:'Pocket Digital Camera', category:'CAMERAS', price:249, image:'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=1800&q=88', detail:'The moments you keep.' }
 ];
 
 export const personas = [
@@ -31,10 +31,11 @@ export const defaults = {
   freeShipping:100,
   priceShift:12,
   swarmSize:5,
-  failures:{ discountBreak:true, dynamicPricing:false, shippingThreshold:false, copyDrift:false, stockMismatch:false, couponEligibility:false, returnPolicy:false }
+  failures:{ discountBreak:false, dynamicPricing:false, shippingThreshold:false, copyDrift:false, stockMismatch:false, couponEligibility:false, returnPolicy:false }
 };
 
 export const money = value => `$${Number(value).toFixed(2)}`;
+const configVersion = 2;
 
 export function extractClaims(config,variant='A'){
   const discountPercent=Number(config.offerCopy.match(/(\d+(?:\.\d+)?)\s*%/)?.[1] ?? config.discount);
@@ -44,11 +45,22 @@ export function extractClaims(config,variant='A'){
 }
 
 export function loadConfig(){
-  try { const saved=JSON.parse(localStorage.getItem('swarm-store-config')||'null'); return {...defaults,...saved,failures:{...defaults.failures,...saved?.failures}}; }
+  try {
+    const saved=JSON.parse(localStorage.getItem('swarm-store-config')||'null');
+    if(!saved)return structuredClone(defaults);
+    const config={...defaults,...saved,failures:{...defaults.failures,...saved.failures}};
+    if(saved.configVersion!==configVersion){
+      config.failures.discountBreak=false;
+      config.configVersion=configVersion;
+      localStorage.setItem('swarm-store-config',JSON.stringify(config));
+      localStorage.removeItem('swarm-last-run');
+    }
+    return config;
+  }
   catch { return structuredClone(defaults); }
 }
 
-export function storeConfig(config){ localStorage.setItem('swarm-store-config',JSON.stringify(config)); }
+export function storeConfig(config){ localStorage.setItem('swarm-store-config',JSON.stringify({...config,configVersion})); }
 
 export function cartOutcome(product, variant, config){
   const active = variant === 'B' ? config.failures : {};

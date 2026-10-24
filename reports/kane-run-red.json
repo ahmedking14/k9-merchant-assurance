@@ -1,0 +1,28 @@
+{
+  "capturedAt": "2026-10-24T23:22:28.223Z",
+  "status": "failed",
+  "executionId": "1bcb3020-0c39-419f-b3e2-6bb898c78469",
+  "evidencePack": ".testmuai/evidence/1bcb3020-0c39-419f-b3e2-6bb898c78469.evidence",
+  "coverage": {
+    "status": "written",
+    "pct": 4
+  },
+  "members": [
+    {
+      "test": "challenger-cart-exposes-missing-first-order-discount-2_test.md",
+      "status": "failed",
+      "sessionId": "4c32125d-59b5-40ae-aa75-0cd559b7c56c",
+      "failure": "AP determined agent is stuck — no viable actions remain",
+      "failureKind": "product"
+    }
+  ],
+  "failedAssertions": [],
+  "confirmedProductBugs": [
+    {
+      "test": "challenger-cart-exposes-missing-first-order-discount-2_test.md",
+      "title": "First-order discount is not applied to an eligible Halo cart",
+      "detail": "The cart shows no FIRST20 discount after Halo Wireless Headphones were added, so the displayed total remains full price.",
+      "confidence": 0.98
+    }
+  ]
+}

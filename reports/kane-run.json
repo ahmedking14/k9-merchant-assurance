@@ -1,0 +1,21 @@
+{
+  "capturedAt": "2026-10-24T23:25:07.976Z",
+  "status": "passed",
+  "executionId": "03c84a33-e069-4513-b782-e3a932e31db9",
+  "evidencePack": ".testmuai/evidence/03c84a33-e069-4513-b782-e3a932e31db9.evidence",
+  "coverage": {
+    "status": "written",
+    "pct": 13
+  },
+  "members": [
+    {
+      "test": "challenger-cart-exposes-missing-first-order-discount-2_test.md",
+      "status": "passed",
+      "sessionId": "7afdb499-3582-46ac-a878-daff74bf4996",
+      "failure": null,
+      "failureKind": null
+    }
+  ],
+  "failedAssertions": [],
+  "confirmedProductBugs": []
+}

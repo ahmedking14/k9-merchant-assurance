@@ -1,0 +1,93 @@
+{
+  "capturedAt": "2026-10-24T23:25:12.588Z",
+  "status": "reported",
+  "pct": 13.392857142857142,
+  "source": "kane-cli cover",
+  "criteria": {
+    "total": 4,
+    "proven": 3
+  },
+  "usecases": {
+    "total": 6,
+    "proven": 0,
+    "partial": 1,
+    "failing": 0,
+    "not_run": 0,
+    "not_designed": 0,
+    "no_criteria": 5
+  },
+  "perUc": [
+    {
+      "id": "uc-1",
+      "title": "Verify the first-order discount in the cart",
+      "risk": "high",
+      "weight": 1.25,
+      "state": "partial",
+      "pct": 75,
+      "criteria": 4,
+      "proven": 3,
+      "manual_runs": 0,
+      "stale": false
+    },
+    {
+      "id": "uc-2",
+      "title": "Simulate and compare shopper journeys across storefront variants",
+      "risk": "high",
+      "weight": 1.25,
+      "state": "no_criteria",
+      "pct": 0,
+      "criteria": 0,
+      "proven": 0,
+      "manual_runs": 0,
+      "stale": false
+    },
+    {
+      "id": "uc-3",
+      "title": "Validate the discount journey with Kane browser evidence",
+      "risk": "high",
+      "weight": 1.25,
+      "state": "no_criteria",
+      "pct": 0,
+      "criteria": 0,
+      "proven": 0,
+      "manual_runs": 0,
+      "stale": false
+    },
+    {
+      "id": "uc-4",
+      "title": "Repair the discount defect and revalidate the challenger",
+      "risk": "high",
+      "weight": 1.25,
+      "state": "no_criteria",
+      "pct": 0,
+      "criteria": 0,
+      "proven": 0,
+      "manual_runs": 0,
+      "stale": false
+    },
+    {
+      "id": "uc-5",
+      "title": "Review the storefront findings with evidence provenance",
+      "risk": "med",
+      "weight": 1,
+      "state": "no_criteria",
+      "pct": 0,
+      "criteria": 0,
+      "proven": 0,
+      "manual_runs": 0,
+      "stale": false
+    },
+    {
+      "id": "uc-6",
+      "title": "Prioritize a proposed storefront fix from findings",
+      "risk": "med",
+      "weight": 1,
+      "state": "no_criteria",
+      "pct": 0,
+      "criteria": 0,
+      "proven": 0,
+      "manual_runs": 0,
+      "stale": false
+    }
+  ]
+}

@@ -2,8 +2,13 @@ import http from 'node:http';
 import { readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createTelemetryStore } from './telemetry.mjs';
+import { createAssurance } from './assurance.mjs';
 
-const root = path.join(path.dirname(fileURLToPath(import.meta.url)), 'app');
+const projectRoot = path.dirname(fileURLToPath(import.meta.url));
+const root = path.join(projectRoot, 'app');
+const telemetry = createTelemetryStore(path.join(projectRoot, 'data', 'telemetry.jsonl'));
+const assurance = createAssurance(projectRoot, telemetry);
 const port = Number(process.env.PORT || 4173);
 const types = { '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg', '.webp': 'image/webp' };
 
@@ -16,7 +21,7 @@ async function readBody(req) {
   let text = '';
   for await (const chunk of req) {
     text += chunk;
-    if (text.length > 25000) throw new Error('Request too large');
+    if (text.length > 1_000_000) throw new Error('Request too large');
   }
   return JSON.parse(text || '{}');
 }
@@ -50,6 +55,29 @@ const server = http.createServer(async (req, res) => {
     if (url.pathname === '/api/plan' && req.method === 'POST') {
       if (!process.env.OPENAI_API_KEY) return json(res, 503, { error: 'OpenAI API key is not configured' });
       return json(res, 200, { plans: await planWithOpenAI(await readBody(req)), source: 'openai' });
+    }
+    if (url.pathname === '/api/telemetry/events' && req.method === 'POST') {
+      const body = await readBody(req);
+      return json(res, 201, await telemetry.append(body.events));
+    }
+    if (url.pathname === '/api/reports/friction' && req.method === 'GET') {
+      const endTime = url.searchParams.get('endTime') || new Date().toISOString();
+      const startTime = url.searchParams.get('startTime') || new Date(Date.parse(endTime) - 86400_000).toISOString();
+      try {
+        return json(res, 200, await telemetry.report({
+          startTime, endTime, source: url.searchParams.get('source') || 'all',
+          bucketMinutes: Number(url.searchParams.get('bucketMinutes') || 5)
+        }));
+      } catch (error) { return json(res, 400, { error: error.message }); }
+    }
+    if (url.pathname === '/api/reports/session' && req.method === 'GET') {
+      try { return json(res, 200, { events: await telemetry.session(url.searchParams.get('sessionId')) }); }
+      catch (error) { return json(res, 400, { error: error.message }); }
+    }
+    if (url.pathname === '/api/assurance/status' && req.method === 'GET') return json(res, 200, await assurance.status());
+    if (url.pathname === '/api/assurance/triage' && req.method === 'POST') {
+      try { return json(res, 200, await assurance.triage(await readBody(req))); }
+      catch (error) { return json(res, 400, { error: error.message }); }
     }
     if (req.method !== 'GET') return json(res, 405, { error: 'Method not allowed' });
     const requested = decodeURIComponent(url.pathname === '/' ? '/index.html' : url.pathname);

@@ -1,0 +1,21 @@
+{
+  "capturedAt": "2026-10-24T23:26:20.686Z",
+  "status": "passed",
+  "executionId": "618bc796-3aa8-4570-b48d-25f2d615c476",
+  "evidencePack": ".testmuai/evidence/618bc796-3aa8-4570-b48d-25f2d615c476.evidence",
+  "coverage": {
+    "status": "written",
+    "pct": 13
+  },
+  "members": [
+    {
+      "test": "control-cart-honors-first-order-discount_test.md",
+      "status": "passed",
+      "sessionId": "44dec53f-1d2f-4069-b635-b72d5b5791f4",
+      "failure": null,
+      "failureKind": null
+    }
+  ],
+  "failedAssertions": [],
+  "confirmedProductBugs": []
+}
