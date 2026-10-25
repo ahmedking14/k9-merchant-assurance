@@ -39,6 +39,7 @@ elements.get('#guideProof').hidden = true;
 elements.get('#guideSecondary').hidden = true;
 globalThis.localStorage = new Store();
 globalThis.sessionStorage = new Store();
+globalThis.window = { K9_HOSTED_DEMO: false };
 globalThis.document = new EventTarget();
 document.body = new Element();
 document.querySelector = selector => elements.get(selector) || null;

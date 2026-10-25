@@ -35,6 +35,7 @@ function renderRunVisual(data) {
 }
 
 function outcome(data) {
+  if (data.hosted) return { tone: '', title: 'Explore archived Kane proof', detail: 'This hosted demo compares shoppers in your browser and shows saved Kane evidence. A fresh Kane run requires the local app and Chrome.', action: data.scenario?.discountBreak ? 'Repair the demo discount' : 'Inspect the saved red and green receipts' };
   if (data.job?.state === 'running') return { tone: '', title: 'Kane is checking the current cart', detail: 'Chrome is running the reviewed test. The report card will update when Kane seals the evidence.', action: 'Wait for the Kane result' };
   if (data.job?.state === 'error') return { tone: 'bad', title: 'Kane run did not finish', detail: data.job.message || 'The browser run stopped before a new receipt was saved.', action: 'Review the error and rerun Kane' };
   if (!data.run) return { tone: '', title: 'Browser verification has not run', detail: 'The shopper comparison is directional. Run Kane to inspect the real storefront.', action: 'Run Kane on the challenger' };
@@ -53,13 +54,12 @@ function renderReport(data, decision) {
   const redBug = data.redRun?.confirmedProductBugs?.[0];
   const controlPassed = data.controlRun?.status === 'passed';
   const percent = data.coverage?.pct;
-  const tested = data.coverage?.criteria;
   const freshness = data.job?.state === 'running' ? '<span class="status-chip">RUNNING</span>' : data.job?.state === 'error' ? '<span class="status-chip bad">RUN ERROR</span>' : run && !data.verificationCurrent ? '<span class="status-chip">PREVIOUS SCENARIO</span>' : `<span class="status-chip ${decision.tone}">${run?.status === 'passed' && data.verificationCurrent ? 'PASSED' : redBug && data.verificationCurrent && run?.status === 'failed' ? 'DEFECT FOUND' : 'REVIEW NEEDED'}</span>`;
 
   $('#reportCard').innerHTML = `<div class="report-head"><div><span class="eyebrow">KANE CLI / FIRST-ORDER DISCOUNT</span><h3>${escapeHtml(decision.title)}</h3><p>${escapeHtml(decision.detail)}</p></div>${freshness}</div>
     <div class="report-metrics">${metric('PROMISED TOTAL', '$151.20', '20% off $189.00 Halo Headphones')}${metric('KANE-OBSERVED DISCOUNT', shownCart?.discount || '—', shownCart ? observationNote : 'No cart value captured yet')}${metric('KANE-OBSERVED TOTAL', shownCart?.total || '—', shownCart ? observationNote : 'No cart value captured yet')}</div>
     <details class="report-history"><summary>See the red → green evidence history · packs ${escapeHtml(shortId(data.redRun?.executionId))} / ${escapeHtml(shortId(data.greenRun?.executionId))} ↗</summary><div class="report-story"><article class="red"><div class="story-top"><b>01 / Defect found</b><span class="status-chip bad">ARCHIVED RED</span></div><p>${escapeHtml(redBug?.detail || 'No confirmed product defect is saved.')}${redBug?.confidence ? ` Kane confidence: ${Math.round(redBug.confidence * 100)}%.` : ''}</p><code>Pack ${escapeHtml(shortId(data.redRun?.executionId))} · ${escapeHtml(dateLabel(data.redRun?.capturedAt))}</code></article><article class="green"><div class="story-top"><b>02 / Same test after repair</b><span class="status-chip good">ARCHIVED GREEN</span></div><p>${data.greenRun?.status === 'passed' ? `Generated test t-4 passed with ${escapeHtml(archivedCart?.discount || 'the expected discount')} off and ${escapeHtml(archivedCart?.total || 'the expected total')}. No order was placed.` : 'No passing rerun is saved yet.'}</p><code>Pack ${escapeHtml(shortId(data.greenRun?.executionId))} · ${escapeHtml(dateLabel(data.greenRun?.capturedAt))}</code></article></div></details>
-    <div class="report-foot"><span><strong>Latest receipt:</strong> ${escapeHtml(shortId(run?.executionId))} · ${escapeHtml(run?.status || 'not run')} · ${escapeHtml(dateLabel(run?.capturedAt))}. ${run?.executionId ? `<a href="/api/assurance/evidence/${encodeURIComponent(run.executionId)}" download>Download evidence pack ↗</a>` : ''} ${controlPassed ? `Control A also passed (${escapeHtml(shortId(data.controlRun.executionId))}).` : 'Control A has no passing receipt yet.'}</span><span><strong>Coverage:</strong> ${Number.isFinite(percent) ? `${percent.toFixed(1)}% project-wide` : 'not measured'} · ${tested?.proven ?? 0}/${tested?.total ?? 0} discount criteria proven. Returning-shopper eligibility is not tested. ${data.redRun?.failedAssertions?.length === 0 ? 'The red product verdict had no separate failed numerical assertion event.' : ''}</span></div>`;
+    <div class="report-foot"><span><strong>${data.hosted ? 'Archived receipts' : 'Latest receipt'}:</strong> ${escapeHtml(shortId(run?.executionId || data.greenRun?.executionId))} · ${escapeHtml(run?.status || (data.hosted ? 'historical demo' : 'not run'))} · ${escapeHtml(dateLabel(run?.capturedAt || data.greenRun?.capturedAt))}. ${run?.executionId && !data.hosted ? `<a href="/api/assurance/evidence/${encodeURIComponent(run.executionId)}" download>Download evidence pack ↗</a>` : ''} ${controlPassed ? `Control A also passed (${escapeHtml(shortId(data.controlRun.executionId))}).` : 'Control A has no passing receipt yet.'}</span><span><strong>Coverage:</strong> ${Number.isFinite(percent) ? `${percent.toFixed(1)}% historical project snapshot` : 'not measured'}. ${data.redRun?.failedAssertions?.length === 0 ? 'The red product verdict had no separate failed numerical assertion event.' : ''}</span></div>`;
 }
 
 export async function refreshAssurance() {
@@ -69,22 +69,23 @@ export async function refreshAssurance() {
     if (!response.ok) throw new Error(data.error || 'Kane status unavailable');
     latestStatus = data;
     const decision = outcome(data);
-    repairAction = Boolean(data.verificationCurrent && data.scenario?.discountBreak && data.run?.confirmedProductBugs?.length);
+    repairAction = Boolean((data.hosted && data.scenario?.discountBreak) || (data.verificationCurrent && data.scenario?.discountBreak && data.run?.confirmedProductBugs?.length));
     renderRunVisual(data);
     const banner = $('#merchantDecision');
     banner.className = `merchant-decision ${decision.tone}`;
     banner.querySelector('strong').textContent = decision.title;
     banner.querySelector('small').textContent = decision.detail;
-    $('#kaneRunState').textContent = data.job?.state === 'running' ? 'RUNNING' : data.job?.state === 'error' ? 'RUN ERROR' : data.verificationCurrent && data.run?.status === 'passed' ? 'LATEST PASSED' : data.verificationCurrent && data.run?.confirmedProductBugs?.length ? 'DEFECT FOUND' : data.run ? 'RERUN NEEDED' : 'READY';
+    $('#kaneRunState').textContent = data.hosted ? 'ARCHIVED PROOF' : data.job?.state === 'running' ? 'RUNNING' : data.job?.state === 'error' ? 'RUN ERROR' : data.verificationCurrent && data.run?.status === 'passed' ? 'LATEST PASSED' : data.verificationCurrent && data.run?.confirmedProductBugs?.length ? 'DEFECT FOUND' : data.run ? 'RERUN NEEDED' : 'READY';
     $('#kaneRunState').className = `status-chip ${data.job?.state === 'error' ? 'bad' : data.job?.state !== 'running' && data.verificationCurrent && data.run?.status === 'passed' ? 'good' : data.job?.state !== 'running' && data.verificationCurrent && data.run?.confirmedProductBugs?.length ? 'bad' : ''}`;
     $('#kaneScenario').textContent = data.scenario?.discountBreak ? 'Challenger B currently drops the discount.' : 'Challenger B currently applies the discount.';
-    $('#kaneLive').textContent = ['running', 'error'].includes(data.job?.state) ? data.job.message : data.verificationCurrent ? `Current evidence pack ${shortId(data.run?.executionId)} · ${data.run.status}.` : 'Run Kane to create a current browser receipt.';
-    $('#runKane').disabled = data.job?.state === 'running';
-    $('#runKane').innerHTML = `${data.job?.state === 'running' ? 'Kane running…' : 'Run Kane'} <span>↗</span>`;
+    $('#kaneLive').textContent = data.hosted ? 'Archived Kane receipts are in the report card. Fresh browser verification runs in the local app.' : ['running', 'error'].includes(data.job?.state) ? data.job.message : data.verificationCurrent ? `Current evidence pack ${shortId(data.run?.executionId)} · ${data.run.status}.` : 'Run Kane to create a current browser receipt.';
+    $('#runKane').disabled = data.hosted || data.job?.state === 'running';
+    $('#runKane').innerHTML = `${data.hosted ? 'Run locally' : data.job?.state === 'running' ? 'Kane running…' : 'Run Kane'} <span>↗</span>`;
+    $('#kaneModeNote').textContent = data.hosted ? 'Fresh Kane runs need the local app and Chrome. Saved receipts remain available below.' : 'Runs the real Chrome test. Kane credits are used.';
     $('#nextPrimary').disabled = data.job?.state === 'running';
-    $('#nextPrimary').innerHTML = `${data.job?.state === 'running' ? 'Kane is running…' : repairAction ? 'Apply demo repair' : data.verificationCurrent && data.run?.status === 'passed' ? 'Rerun Kane' : 'Run Kane on this state'} <span>↗</span>`;
+    $('#nextPrimary').innerHTML = `${data.job?.state === 'running' ? 'Kane is running…' : repairAction ? 'Apply demo repair' : data.hosted ? 'View saved proof' : data.verificationCurrent && data.run?.status === 'passed' ? 'Rerun Kane' : 'Run Kane on this state'} <span>↗</span>`;
     $('#nextActionTitle').textContent = decision.action;
-    $('#nextActionCopy').textContent = ['running', 'error'].includes(data.job?.state) ? decision.detail : repairAction ? 'Restore the discount in challenger B for this demo. Then compare shoppers again and rerun Kane to prove the repair.' : data.verificationCurrent && data.run?.status === 'passed' ? 'The discount journey is healthy. Keep t-4 and the control check for regressions; the returning-shopper fixture is the next coverage gap.' : decision.detail;
+    $('#nextActionCopy').textContent = data.hosted ? repairAction ? 'Restore the discount in challenger B, compare again, then inspect the archived Kane proof. The archive is not a fresh check.' : 'Compare shoppers and inspect the archived red and green Kane receipts. Use the local app for a fresh browser run.' : ['running', 'error'].includes(data.job?.state) ? decision.detail : repairAction ? 'Restore the discount in challenger B for this demo. Then compare shoppers again and rerun Kane to prove the repair.' : data.verificationCurrent && data.run?.status === 'passed' ? 'The discount journey is healthy. Keep t-4 and the control check for regressions.' : decision.detail;
     $('#kaneTestSteps').innerHTML = data.testSteps?.length ? data.testSteps.map(step => `<li><b>STEP ${String(step.number).padStart(2, '0')}</b>${escapeHtml(step.instruction)}</li>`).join('') : '<li>Generated Kane test t-4 is not available yet.</li>';
     renderReport(data, decision);
     return data;
@@ -125,7 +126,7 @@ async function runTriage() {
 
 export function initAssurance() {
   $('#runKane').addEventListener('click', runKane);
-  $('#nextPrimary').addEventListener('click', () => { if (repairAction) $('#scenarioFault').click(); else runKane(); });
+  $('#nextPrimary').addEventListener('click', () => { if (repairAction) $('#scenarioFault').click(); else if (latestStatus?.hosted) { $('#reportCard .report-history').open = true; $('#reportCard').scrollIntoView({ behavior: 'smooth' }); } else runKane(); });
   $('#openJourneyData').addEventListener('click', () => { $('#telemetryDetails').open = true; $('#telemetryDetails').scrollIntoView({ behavior: 'smooth' }); });
   $('#runTriage').addEventListener('click', runTriage);
   refreshAssurance();

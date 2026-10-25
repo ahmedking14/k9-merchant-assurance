@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "node server.mjs",
     "start": "node server.mjs",
-    "check": "node scripts/smoke.mjs && node scripts/telemetry-check.mjs && node scripts/walkthrough-check.mjs"
+    "check": "node scripts/smoke.mjs && node scripts/telemetry-check.mjs && node scripts/walkthrough-check.mjs && node scripts/build-hosted.mjs && node scripts/hosted-check.mjs"
   },
   "engines": {
     "node": ">=18"

@@ -21,8 +21,8 @@ See [docs/hackday-plan.md](docs/hackday-plan.md) for the build sequence and judg
 ## Status
 
 - Web app and store implemented; local contract check passes with `npm run check`.
-- Kane's generated challenger test passed after a confirmed red defect and repair. The control replay passed. Project coverage is 13.4% (3 of 4 designed criteria proven); the returning-shopper criterion is deferred.
-- Solo team. No public repo or event submission claimed yet.
+- Kane's generated challenger test passed after a confirmed red defect and repair. The control replay passed. Historical project coverage snapshot: 13.4%.
+- Solo team. No event submission claimed yet.
 - The local dev server runs on port 4173. The merchant report card reads captured Kane receipts separately from local simulation telemetry.
 
 ## Run locally
@@ -34,5 +34,9 @@ npm run dev
 Open `http://localhost:4173`. No dependencies need installing. Run `npm run check` for the store contract and telemetry range checks. The Kane action requires an authenticated `kane-cli` installation and uses the approved generated `t-4` file. To enable OpenAI triage, set `OPENAI_API_KEY` in your own terminal environment before starting the server; never commit it. The server uses the [OpenAI Responses API structured output format](https://developers.openai.com/api/docs/guides/structured-outputs).
 
 The first visit opens a guided demo. **Guided demo** in the header reopens it later. Each step activates the actual local workflow: introduce the challenger fault, compare five shoppers, inspect Kane evidence, apply the demo repair, compare again, and check the repair. Use **Right/Down Arrow** to continue and **Left/Up Arrow** to revisit a step. The keyboard path uses saved historical receipts at Kane steps; only clicking **Run Kane live** starts a new credit-using browser run. The guide never presents a saved receipt as a fresh verification of the current store state. On desktop the translucent guide has its own side rail, so it does not cover the dashboard.
+
+## Hosted demo
+
+`vercel.json` builds a static deployment with a browser-local scenario and telemetry store. The Vercel site supports the A/B comparison, storefront, guided walkthrough, time-range report, and clearly marked archived Kane receipts. Fresh Kane CLI runs, evidence-pack downloads, and OpenAI triage require the local Node app and its configured credentials; the hosted site disables those actions rather than claiming a fresh verification. Raw `.evidence` packs are deliberately excluded from the public build.
 
 The storefront and control room use real stock photographs from Unsplash as fictional demo imagery under the [Unsplash License](https://unsplash.com/license). Products and brand are invented; no purchases or payments occur.

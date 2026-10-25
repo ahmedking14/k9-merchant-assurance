@@ -36,7 +36,7 @@ const stages = [
   },
   {
     title: 'Make the merchant decision.',
-    copy: 'Check the observed discount, total, evidence pack, and coverage gap. Keep the generated test as a regression check; returning-shopper eligibility still needs a fixture.',
+    copy: 'Check the observed discount, total, evidence pack, and next action. Keep the generated cart test as a regression check.',
     target: '#reportCard', side: 'left', action: 'Finish walkthrough'
   }
 ];
@@ -61,7 +61,7 @@ function setStatus(message, tone = '') {
 }
 function setBusy(value) {
   busy = value;
-  $('#guidePrimary').disabled = value;
+  $('#guidePrimary').disabled = value || (Boolean(window.K9_HOSTED_DEMO) && [2, 5].includes(stage));
   $('#guideSecondary').disabled = value;
   $('#guideRestart').disabled = value;
 }
@@ -107,12 +107,13 @@ function render() {
   document.body.dataset.guideSide = item.side;
   $('#guideStep').textContent = `STEP ${stage + 1} OF ${stages.length}`;
   $('#guideTitle').textContent = item.title;
-  $('#guideCopy').textContent = item.copy + ([3, 6].includes(stage) && proof?.source === 'saved' ? ' This saved receipt is a historical example, not a fresh check of the current scenario.' : '');
+  $('#guideCopy').textContent = item.copy + (window.K9_HOSTED_DEMO && [2, 5].includes(stage) ? ' Fresh Kane runs require the local app; use the saved receipt here.' : '') + ([3, 6].includes(stage) && proof?.source === 'saved' ? ' This saved receipt is a historical example, not a fresh check of the current scenario.' : '');
   $('#guidePrimary').innerHTML = `${item.action} <span aria-hidden="true">↗</span>`;
   const alternate = $('#guideSecondary');
   alternate.hidden = !item.alternate;
   if (item.alternate) alternate.textContent = item.alternate;
   $('#guideProgress').innerHTML = stages.map((_, index) => `<i class="${index < stage ? 'done' : index === stage ? 'current' : ''}"></i>`).join('');
+  setBusy(busy);
   setStatus('');
   renderProof();
   if (stage === 3 && proof?.source === 'saved') {
@@ -223,6 +224,7 @@ async function useSaved(kind) {
 
 async function primary() {
   if (busy) return;
+  if (window.K9_HOSTED_DEMO && [2, 5].includes(stage)) return;
   if (stage === 6) { close(); return; }
   setBusy(true);
   setStatus('Working…');

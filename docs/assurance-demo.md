@@ -23,7 +23,6 @@ Kane's first design produced these files:
 - `challenger-cart-exposes-missing-first-order-discount_test.md` — superseded after its first run misread the cart.
 - `challenger-cart-exposes-missing-first-order-discount-2_test.md` — approved replacement `t-4`; reads the actual discount line and total before any order.
 - `control-cart-honors-first-order-discount_test.md` — the honoring control check.
-- `returning-shopper-receives-no-first-order-discount-in-either_test.md` — a later eligibility check. Kane recorded a **returning shopper fixture** gap because the demo store does not yet track shopper order history. Keep this out of the focused browser run until that behavior exists and its design is reviewed.
 
 ```bash
 kane-cli testrun run .testmuai/tests/challenger-cart-exposes-missing-first-order-discount-2_test.md --no-adaptive-heal --author --agent < /dev/null | tee reports/kane-run-green.ndjson
@@ -40,7 +39,7 @@ The first two-test suite finished with a passing control and a failing challenge
 
 Kane `maintain evolve t-1` generated replacement `t-4`. The first replacement run found confusing campaign copy, “USE CODE FIRST20,” despite there being no code-entry field. The copy was clarified to say the first-order discount is automatically applied. The next `t-4` run confirmed a **product defect** with 98% confidence: variant B's cart showed no discount and retained the full price. Its agent stopped before a separate numerical assertion event, so `reports/kane-run-red.json` records a confirmed product bug and zero failed assertion events. Evidence pack: `1bcb3020-0c39-419f-b3e2-6bb898c78469`.
 
-The repair changed the challenger default to apply the 20% offer, leaving the fault available as an explicit simulator toggle. The same `t-4` test then passed with a `$189.00` subtotal, `-$37.80` discount, and `$151.20` total before any order. Evidence pack: `03c84a33-e069-4513-b782-e3a932e31db9`. Project coverage is **13.4%**, with 3 of 4 designed criteria proven. The returning-shopper criterion remains unrun because the demo has no shopper-history fixture. This coverage is a project-wide figure, not a claim that all six use cases were tested.
+The repair changed the challenger default to apply the 20% offer, leaving the fault available as an explicit simulator toggle. The same `t-4` test then passed with a `$189.00` subtotal, `-$37.80` discount, and `$151.20` total before any order. Evidence pack: `03c84a33-e069-4513-b782-e3a932e31db9`. The saved **13.4%** coverage figure is a historical project-wide snapshot, not a claim that all six use cases were tested.
 
 The approved control test `t-2` was replayed after the copy change and also passed. Its receipt is `reports/kane-run-control.json`; evidence pack: `618bc796-3aa8-4570-b48d-25f2d615c476`.
 
