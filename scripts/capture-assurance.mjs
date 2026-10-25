@@ -29,17 +29,23 @@ if (kind === 'run') {
     }
     const verdict = [...events].reverse().find(event => event.type === 'test_md_bug_verdict');
     const assertion = events.find(event => event.type === 'step_event' && event.event === 'assertion' && event.passed === false);
+    const finalCart = [...events].reverse().find(event => event.type === 'run_end' && (event.final_state?.cart_discount || event.final_state?.cart_total));
+    const runEnd = [...events].reverse().find(event => event.type === 'run_end');
+    const signals = runEnd?.verdict?.signals || [];
+    const discountSignal = signals.find(signal => /^-\$\d+(?:\.\d{2})?$/.test(signal.excerpt || ''))?.excerpt;
+    const totalSignal = signals.find(signal => /^\$\d+(?:\.\d{2})?$/.test(signal.excerpt || ''))?.excerpt;
+    const observedCart = finalCart ? { discount: finalCart.final_state.cart_discount || null, total: finalCart.final_state.cart_total || null, source: 'recorded cart variables' } : discountSignal && totalSignal ? { discount: discountSignal, total: totalSignal, source: 'confirmed product verdict signals' } : null;
     const failureKind = row.status === 'passed' ? null : verdict?.category === 'agent_misstep' || verdict?.family === 'automation_bug' ? 'automation' : assertion ? 'assertion' : verdict?.confirmed ? 'product' : 'unclassified';
     const confirmedProductBug = verdict?.confirmed && verdict?.family === 'application_issue' ? {
       title: verdict.bug_title || verdict.one_liner || 'Confirmed product defect',
       detail: verdict.one_liner || '',
       confidence: verdict.confidence ?? null
     } : null;
-    return { test: path.basename(row.path || ''), status: row.status, sessionId: row.session_id || null, failure: row.failure?.message || null, failureKind, failedAssertion: assertion?.detail || null, confirmedProductBug };
+    return { test: path.basename(row.path || ''), status: row.status, sessionId: row.session_id || null, failure: row.failure?.message || null, failureKind, observedCart, failedAssertion: assertion?.detail || null, confirmedProductBug };
   }
   const summaries = await Promise.all(members.map(summarizeMember));
   const report = {
-    capturedAt: new Date().toISOString(),
+    capturedAt: done.ts || new Date().toISOString(),
     status: done.overall_status,
     executionId: done.execution_id || null,
     evidencePack: coverageEvent?.pack?.startsWith(root + path.sep) ? path.relative(root, coverageEvent.pack) : null,

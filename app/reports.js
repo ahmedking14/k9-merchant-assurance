@@ -3,7 +3,7 @@ const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&
 const prettyTime = value => new Date(value).toLocaleString([], {month:'short',day:'numeric',hour:'numeric',minute:'2-digit',second:'2-digit'});
 const eventName = value => value.replaceAll('_',' ');
 const frictionTypes = new Set(['claim_mismatch','dead_click','rage_click','excessive_scroll']);
-let range = '5m';
+let range = '24h';
 let selectedSession = null;
 let loading = false;
 
@@ -103,5 +103,5 @@ export function initReports() {
   $('#reportBucket').addEventListener('change', () => refreshReport());
   $('#sessionList').addEventListener('click', event => { const button = event.target.closest('[data-session]'); if (button) openSession(button.dataset.session); });
   refreshReport();
-  setInterval(() => { if ($('#view-evidence').classList.contains('active') && range !== 'custom') refreshReport({ updateInputs: true }); }, 15000);
+  setInterval(() => { if ($('#telemetryDetails').open && range !== 'custom') refreshReport({ updateInputs: true }); }, 15000);
 }

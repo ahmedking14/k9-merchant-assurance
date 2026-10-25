@@ -1,8 +1,8 @@
 {
-  "capturedAt": "2026-10-24T23:25:07.976Z",
+  "capturedAt": "2026-10-25T00:02:44.612Z",
   "status": "passed",
-  "executionId": "03c84a33-e069-4513-b782-e3a932e31db9",
-  "evidencePack": ".testmuai/evidence/03c84a33-e069-4513-b782-e3a932e31db9.evidence",
+  "executionId": "25a9fab4-87f8-49f4-beb4-c7c8ec639db9",
+  "evidencePack": ".testmuai/evidence/25a9fab4-87f8-49f4-beb4-c7c8ec639db9.evidence",
   "coverage": {
     "status": "written",
     "pct": 13
@@ -11,9 +11,14 @@
     {
       "test": "challenger-cart-exposes-missing-first-order-discount-2_test.md",
       "status": "passed",
-      "sessionId": "7afdb499-3582-46ac-a878-daff74bf4996",
+      "sessionId": "a3e9ee88-623a-4bd9-a21f-77a4f9827218",
       "failure": null,
-      "failureKind": null
+      "failureKind": null,
+      "observedCart": {
+        "discount": "-$37.80",
+        "total": "$151.20",
+        "source": "recorded cart variables"
+      }
     }
   ],
   "failedAssertions": [],

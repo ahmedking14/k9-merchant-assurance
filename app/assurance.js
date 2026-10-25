@@ -1,53 +1,133 @@
 const $ = selector => document.querySelector(selector);
-const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
+let latestStatus = null;
+let repairAction = false;
 
-function asset(label, value) { return `<div class="assurance-asset"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>`; }
+function shortId(id) { return id ? id.slice(0, 8) : '—'; }
+function dateLabel(value) { return value ? new Date(value).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : 'Not captured'; }
+function metric(label, value, note) { return `<div class="report-metric"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong><small>${escapeHtml(note)}</small></div>`; }
+
+function renderRunVisual(data) {
+  const running = data.job?.state === 'running';
+  const runError = data.job?.state === 'error';
+  const phase = data.job?.phase;
+  const step = data.job?.step || 0;
+  const passed = data.verificationCurrent && data.run?.status === 'passed';
+  const failed = data.verificationCurrent && data.run?.confirmedProductBugs?.length;
+  const stages = [...document.querySelectorAll('#runVisual .run-stage')];
+  stages.forEach(stage => stage.className = 'run-stage');
+  if (running) {
+    stages[0].classList.add(phase === 'starting' || (phase === 'browser' && step < 3) ? 'active' : 'done');
+    if (phase === 'browser' && step >= 3) stages[1].classList.add('active');
+    if (phase === 'evidence' || phase === 'coverage') { stages[1].classList.add('done'); stages[2].classList.add('active'); }
+  } else if (runError) {
+    stages[0].classList.add('done');
+    stages[Math.min(2, Math.max(0, step - 1))].classList.add('failed');
+  } else if (passed || failed) {
+    stages[0].classList.add('done');
+    stages[1].classList.add(failed ? 'failed' : 'done');
+    stages[2].classList.add('done');
+  }
+  const flowKane = $('#flowKane');
+  const flowDecision = $('#flowDecision');
+  flowKane.className = `architecture-node ${running ? 'active' : runError ? 'bad' : passed ? 'good' : failed ? 'bad' : ''}`;
+  flowDecision.className = `architecture-node ${running || runError ? '' : passed ? 'good' : failed ? 'bad' : ''}`;
+}
+
+function outcome(data) {
+  if (data.job?.state === 'running') return { tone: '', title: 'Kane is checking the current cart', detail: 'Chrome is running the reviewed test. The report card will update when Kane seals the evidence.', action: 'Wait for the Kane result' };
+  if (data.job?.state === 'error') return { tone: 'bad', title: 'Kane run did not finish', detail: data.job.message || 'The browser run stopped before a new receipt was saved.', action: 'Review the error and rerun Kane' };
+  if (!data.run) return { tone: '', title: 'Browser verification has not run', detail: 'The shopper comparison is directional. Run Kane to inspect the real storefront.', action: 'Run Kane on the challenger' };
+  if (!data.verificationCurrent) return { tone: '', title: 'The store scenario changed', detail: 'The saved Kane receipt belongs to an earlier storefront state. Rerun the same test before making a merchant decision.', action: 'Rerun Kane for this scenario' };
+  if (data.run.status === 'passed') return { tone: 'good', title: 'Verified for this discount journey', detail: 'Kane read the displayed cart discount and total in Chrome. This supports the first-order Halo Headphones journey only.', action: 'Keep this test as a regression check' };
+  if (data.run.confirmedProductBugs?.length) return { tone: 'bad', title: 'Customer promise is broken', detail: 'Kane confirmed an application defect in the real challenger cart. Fix the discount logic, then rerun this same test.', action: 'Fix the cart, then rerun Kane' };
+  return { tone: '', title: 'Kane needs a clean rerun', detail: 'The latest run did not prove a product defect or a passing journey. Review its failure type and rerun.', action: 'Rerun Kane' };
+}
+
+function renderReport(data, decision) {
+  const run = data.run;
+  const currentCart = run?.members?.find(member => member.observedCart)?.observedCart;
+  const archivedCart = data.greenRun?.members?.find(member => member.observedCart)?.observedCart;
+  const shownCart = currentCart || archivedCart;
+  const observationNote = currentCart ? ['running', 'error'].includes(data.job?.state) ? 'previous completed Kane run' : data.verificationCurrent ? `latest Kane browser run · ${currentCart.source || 'cart observation'}` : 'previous scenario Kane browser run' : 'archived passing Kane run';
+  const redBug = data.redRun?.confirmedProductBugs?.[0];
+  const controlPassed = data.controlRun?.status === 'passed';
+  const percent = data.coverage?.pct;
+  const tested = data.coverage?.criteria;
+  const freshness = data.job?.state === 'running' ? '<span class="status-chip">RUNNING</span>' : data.job?.state === 'error' ? '<span class="status-chip bad">RUN ERROR</span>' : run && !data.verificationCurrent ? '<span class="status-chip">PREVIOUS SCENARIO</span>' : `<span class="status-chip ${decision.tone}">${run?.status === 'passed' && data.verificationCurrent ? 'PASSED' : redBug && data.verificationCurrent && run?.status === 'failed' ? 'DEFECT FOUND' : 'REVIEW NEEDED'}</span>`;
+
+  $('#reportCard').innerHTML = `<div class="report-head"><div><span class="eyebrow">KANE CLI / FIRST-ORDER DISCOUNT</span><h3>${escapeHtml(decision.title)}</h3><p>${escapeHtml(decision.detail)}</p></div>${freshness}</div>
+    <div class="report-metrics">${metric('PROMISED TOTAL', '$151.20', '20% off $189.00 Halo Headphones')}${metric('KANE-OBSERVED DISCOUNT', shownCart?.discount || '—', shownCart ? observationNote : 'No cart value captured yet')}${metric('KANE-OBSERVED TOTAL', shownCart?.total || '—', shownCart ? observationNote : 'No cart value captured yet')}</div>
+    <details class="report-history"><summary>See the red → green evidence history · packs ${escapeHtml(shortId(data.redRun?.executionId))} / ${escapeHtml(shortId(data.greenRun?.executionId))} ↗</summary><div class="report-story"><article class="red"><div class="story-top"><b>01 / Defect found</b><span class="status-chip bad">ARCHIVED RED</span></div><p>${escapeHtml(redBug?.detail || 'No confirmed product defect is saved.')}${redBug?.confidence ? ` Kane confidence: ${Math.round(redBug.confidence * 100)}%.` : ''}</p><code>Pack ${escapeHtml(shortId(data.redRun?.executionId))} · ${escapeHtml(dateLabel(data.redRun?.capturedAt))}</code></article><article class="green"><div class="story-top"><b>02 / Same test after repair</b><span class="status-chip good">ARCHIVED GREEN</span></div><p>${data.greenRun?.status === 'passed' ? `Generated test t-4 passed with ${escapeHtml(archivedCart?.discount || 'the expected discount')} off and ${escapeHtml(archivedCart?.total || 'the expected total')}. No order was placed.` : 'No passing rerun is saved yet.'}</p><code>Pack ${escapeHtml(shortId(data.greenRun?.executionId))} · ${escapeHtml(dateLabel(data.greenRun?.capturedAt))}</code></article></div></details>
+    <div class="report-foot"><span><strong>Latest receipt:</strong> ${escapeHtml(shortId(run?.executionId))} · ${escapeHtml(run?.status || 'not run')} · ${escapeHtml(dateLabel(run?.capturedAt))}. ${run?.executionId ? `<a href="/api/assurance/evidence/${encodeURIComponent(run.executionId)}" download>Download evidence pack ↗</a>` : ''} ${controlPassed ? `Control A also passed (${escapeHtml(shortId(data.controlRun.executionId))}).` : 'Control A has no passing receipt yet.'}</span><span><strong>Coverage:</strong> ${Number.isFinite(percent) ? `${percent.toFixed(1)}% project-wide` : 'not measured'} · ${tested?.proven ?? 0}/${tested?.total ?? 0} discount criteria proven. Returning-shopper eligibility is not tested. ${data.redRun?.failedAssertions?.length === 0 ? 'The red product verdict had no separate failed numerical assertion event.' : ''}</span></div>`;
+}
 
 export async function refreshAssurance() {
   try {
     const response = await fetch('/api/assurance/status');
     const data = await response.json();
-    if (!response.ok) throw new Error(data.error || 'Assurance unavailable');
-    const simulated = Boolean(localStorage.getItem('swarm-last-run'));
-    $('#assuranceStages').innerHTML = data.stages.map((stage, index) => {
-      const complete = stage.id === 'simulate' ? simulated : stage.state === 'complete';
-      return `<div class="assurance-stage ${complete ? 'complete' : ''}"><b>${complete ? '✓' : String(index + 1).padStart(2, '0')}</b><span><strong>${escapeHtml(stage.label)}</strong><small>${complete ? 'AVAILABLE' : 'AWAITING EVIDENCE'}</small></span></div>`;
-    }).join('');
-    const failures = data.run?.failedAssertions?.length || 0;
-    const coverage = data.coverage?.pct ?? data.coverage?.percent ?? data.coverage?.coverage?.pct;
-    $('#assuranceStatus').textContent = data.run?.status ? data.run.status.toUpperCase() : data.tests.length ? 'TESTS DESIGNED' : 'KANE PENDING';
-    $('#assuranceAssets').innerHTML = [
-      asset('Requirement', data.requirement),
-      asset('Approved tests', data.tests.length ? 't-4 challenger cart · t-2 control cart' : 'Awaiting Kane design'),
-      asset('Deferred', data.tests.length ? 't-3 returning shopper · fixture needed' : 'None yet'),
-      asset('Browser run', data.run?.status ? `${data.run.status} · ${failures} failed assertion${failures === 1 ? '' : 's'}` : 'Not run'),
-      asset('Red → green', data.redRun?.confirmedProductBugs?.length && data.greenRun?.status === 'passed' ? `Confirmed defect · ${data.redRun.executionId?.slice(0, 8)} → ${data.greenRun.executionId?.slice(0, 8)} passed` : 'Awaiting paired Kane runs'),
-      asset('Control replay', data.controlRun?.status === 'passed' ? `Passed · ${data.controlRun.executionId?.slice(0, 8)}` : 'Not captured'),
-      asset('Evidence pack', data.run?.executionId ? `Sealed · ${data.run.executionId?.slice(0, 8)}` : 'Not sealed'),
-      asset('Coverage', coverage != null && Number.isFinite(Number(coverage)) ? `${Number(coverage).toFixed(1)}% · ${data.coverage?.criteria?.proven ?? 0}/${data.coverage?.criteria?.total ?? 0} criteria` : data.coverage ? 'Figure captured' : 'Not measured')
-    ].join('') + (data.run?.members?.length ? `<div class="assurance-member-list">${data.run.members.map(member => `<div class="assurance-member ${member.status === 'passed' ? 'passed' : 'failed'}"><span>${member.status === 'passed' ? '✓' : '!'}</span><div><strong>${escapeHtml(member.test)}</strong><small>${escapeHtml(member.failureKind === 'automation' ? `Automation issue · ${member.failure || ''}` : member.failure || `Kane browser test ${member.status}`)}</small></div></div>`).join('')}</div>` : '');
-    $('#triageMode').textContent = data.run?.status ? 'Kane evidence available for triage.' : 'Kane verification pending; agent findings will be labeled accordingly.';
-  } catch (error) { $('#assuranceStatus').textContent = 'UNAVAILABLE'; $('#assuranceAssets').textContent = error.message; }
+    if (!response.ok) throw new Error(data.error || 'Kane status unavailable');
+    latestStatus = data;
+    const decision = outcome(data);
+    repairAction = Boolean(data.verificationCurrent && data.scenario?.discountBreak && data.run?.confirmedProductBugs?.length);
+    renderRunVisual(data);
+    const banner = $('#merchantDecision');
+    banner.className = `merchant-decision ${decision.tone}`;
+    banner.querySelector('strong').textContent = decision.title;
+    banner.querySelector('small').textContent = decision.detail;
+    $('#kaneRunState').textContent = data.job?.state === 'running' ? 'RUNNING' : data.job?.state === 'error' ? 'RUN ERROR' : data.verificationCurrent && data.run?.status === 'passed' ? 'LATEST PASSED' : data.verificationCurrent && data.run?.confirmedProductBugs?.length ? 'DEFECT FOUND' : data.run ? 'RERUN NEEDED' : 'READY';
+    $('#kaneRunState').className = `status-chip ${data.job?.state === 'error' ? 'bad' : data.job?.state !== 'running' && data.verificationCurrent && data.run?.status === 'passed' ? 'good' : data.job?.state !== 'running' && data.verificationCurrent && data.run?.confirmedProductBugs?.length ? 'bad' : ''}`;
+    $('#kaneScenario').textContent = data.scenario?.discountBreak ? 'Challenger B currently drops the discount.' : 'Challenger B currently applies the discount.';
+    $('#kaneLive').textContent = ['running', 'error'].includes(data.job?.state) ? data.job.message : data.verificationCurrent ? `Current evidence pack ${shortId(data.run?.executionId)} · ${data.run.status}.` : 'Run Kane to create a current browser receipt.';
+    $('#runKane').disabled = data.job?.state === 'running';
+    $('#runKane').innerHTML = `${data.job?.state === 'running' ? 'Kane running…' : 'Run Kane'} <span>↗</span>`;
+    $('#nextPrimary').disabled = data.job?.state === 'running';
+    $('#nextPrimary').innerHTML = `${data.job?.state === 'running' ? 'Kane is running…' : repairAction ? 'Apply demo repair' : data.verificationCurrent && data.run?.status === 'passed' ? 'Rerun Kane' : 'Run Kane on this state'} <span>↗</span>`;
+    $('#nextActionTitle').textContent = decision.action;
+    $('#nextActionCopy').textContent = ['running', 'error'].includes(data.job?.state) ? decision.detail : repairAction ? 'Restore the discount in challenger B for this demo. Then compare shoppers again and rerun Kane to prove the repair.' : data.verificationCurrent && data.run?.status === 'passed' ? 'The discount journey is healthy. Keep t-4 and the control check for regressions; the returning-shopper fixture is the next coverage gap.' : decision.detail;
+    $('#kaneTestSteps').innerHTML = data.testSteps?.length ? data.testSteps.map(step => `<li><b>STEP ${String(step.number).padStart(2, '0')}</b>${escapeHtml(step.instruction)}</li>`).join('') : '<li>Generated Kane test t-4 is not available yet.</li>';
+    renderReport(data, decision);
+    return data;
+  } catch (error) {
+    $('#merchantDecision').querySelector('strong').textContent = 'Kane status is unavailable';
+    $('#merchantDecision').querySelector('small').textContent = error.message;
+    $('#kaneLive').textContent = error.message;
+  }
+}
+
+async function runKane() {
+  const button = $('#runKane');
+  button.disabled = true;
+  $('#kaneLive').textContent = 'Starting Kane against challenger B…';
+  try {
+    const response = await fetch('/api/assurance/run', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ target: 'challenger' }) });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || 'Kane could not start');
+    await refreshAssurance();
+  } catch (error) { $('#kaneLive').textContent = error.message; button.disabled = false; }
 }
 
 async function runTriage() {
   const button = $('#runTriage');
   button.disabled = true;
-  $('#triageStatus').textContent = 'ANALYZING';
-  $('#triageResults').textContent = 'Reading the selected telemetry window and available Kane artifacts…';
+  $('#triageStatus').textContent = 'READING';
   try {
-    const endTime = $('#reportEnd').value ? new Date($('#reportEnd').value).toISOString() : new Date().toISOString();
     const startTime = $('#reportStart').value ? new Date($('#reportStart').value).toISOString() : new Date(Date.now() - 86400000).toISOString();
+    const endTime = $('#reportEnd').value ? new Date($('#reportEnd').value).toISOString() : new Date().toISOString();
     const response = await fetch('/api/assurance/triage', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ startTime, endTime }) });
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || 'Triage failed');
     $('#triageStatus').textContent = data.mode.toUpperCase();
-    $('#triageResults').innerHTML = data.issues.map(issue => `<div class="triage-issue"><div class="triage-issue-head"><b>${escapeHtml(issue.priority)}</b><h4>${escapeHtml(issue.title)}</h4></div><p>${escapeHtml(issue.finding)}</p><small>EVIDENCE · ${escapeHtml(issue.evidence)}</small><p class="fix"><b>Proposed fix · </b>${escapeHtml(issue.proposedFix)}</p></div>`).join('') + `<span class="assurance-note">${data.run?.status ? 'Kane run evidence included.' : 'No Kane run has been captured yet; recommendations rely on local simulation only.'} A fix is verified only after a new Kane run passes.</span>`;
+    $('#triageResults').innerHTML = data.issues.map(issue => `<article class="triage-issue"><span class="triage-priority">${escapeHtml(issue.priority)}</span><h4>${escapeHtml(issue.title)}</h4><p>${escapeHtml(issue.finding)}</p><small>Evidence: ${escapeHtml(issue.evidence)}</small><p class="fix"><b>Next action:</b> ${escapeHtml(issue.proposedFix)}</p></article>`).join('');
   } catch (error) { $('#triageStatus').textContent = 'UNAVAILABLE'; $('#triageResults').textContent = error.message; }
   finally { button.disabled = false; }
 }
 
 export function initAssurance() {
+  $('#runKane').addEventListener('click', runKane);
+  $('#nextPrimary').addEventListener('click', () => { if (repairAction) $('#scenarioFault').click(); else runKane(); });
+  $('#openJourneyData').addEventListener('click', () => { $('#telemetryDetails').open = true; $('#telemetryDetails').scrollIntoView({ behavior: 'smooth' }); });
   $('#runTriage').addEventListener('click', runTriage);
   refreshAssurance();
+  setInterval(() => { if (latestStatus?.job?.state === 'running') refreshAssurance(); }, 2500);
 }

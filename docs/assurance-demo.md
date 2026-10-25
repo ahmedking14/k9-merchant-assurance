@@ -1,6 +1,6 @@
 # K9 assurance demo
 
-The single judged loop is the advertised **20% first-order discount** on the MONOFORM demo store. Variant A honored it while variant B dropped it in the cart. Kane confirmed the defect, then the discount was repaired and the same generated browser test passed. Start the app with `npm run dev` and open the Evidence room. The simulator can still inject `discountBreak` in challenger B for a new comparison; its output stays separate from Kane's browser evidence.
+The single judged loop is the advertised **20% first-order discount** on the MONOFORM demo store. Variant A honored it while variant B dropped it in the cart. Kane confirmed the defect, then the discount was repaired and the same generated browser test passed. Start the app with `npm run dev` and open the merchant cockpit. Its visual architecture is **claim → simulate shopper journeys → verify the current cart with Kane → act on the report card**. Controls, live test stages, result metrics, and next actions fit in one desktop view. The `discountBreak` switch updates the local server scenario shared by the dashboard, storefront, and Kane's separate Chrome session. Changing the scenario makes an older Kane receipt visibly stale.
 
 ## Kane command path
 
@@ -32,7 +32,7 @@ kane-cli cover --mode agent | tee reports/coverage.ndjson
 node scripts/capture-assurance.mjs coverage reports/coverage.ndjson
 ```
 
-The `reports/*.ndjson` streams and sealed evidence packs stay local. The capture script writes small, shareable receipts in `reports/kane-run-red.json`, `reports/kane-run-green.json`, and `reports/coverage.json`. Commit the generated `_test.md` files and these JSON outputs after inspecting them; keep `.context/` out of Git. The Evidence room reads those artifacts on refresh. A report URL can also be attached there for the full Kane result.
+The `reports/*.ndjson` streams and sealed evidence packs stay local. The capture script writes small, shareable receipts in `reports/kane-run-red.json`, `reports/kane-run-green.json`, and `reports/coverage.json`. Commit the generated `_test.md` files and these JSON outputs after inspecting them; keep `.context/` out of Git. The merchant report card reads these artifacts on refresh. Its **Run Kane** button runs the already approved t-4 test, shows live Chrome actions from Kane's session log, captures `reports/kane-run.json`, updates coverage, and shows the exact cart values Kane observed. The latest sealed pack can be downloaded from the report card. That button uses Kane credits; the page says so before it is pressed.
 
 ### Initial run diagnosis
 
@@ -46,6 +46,6 @@ The approved control test `t-2` was replayed after the copy change and also pass
 
 ## Agent handoff
 
-Select the telemetry window in Evidence room and choose **Ask K9 Triage Agent**. With `OPENAI_API_KEY` configured, the server sends the selected friction summary and captured Kane assertion failures to the OpenAI Responses API. The agent ranks issues and proposes fixes. Without a key, the UI labels its deterministic ranking **rule-based preview**. It never calls a proposed fix a completed repair.
+Open **K9 Triage Agent** from the merchant report card. With `OPENAI_API_KEY` configured, the server sends the selected friction summary and captured Kane assertion failures to the OpenAI Responses API. The agent ranks issues and proposes fixes. Without a key, the UI labels its deterministic ranking **rule-based preview**. It never calls a proposed fix a completed repair. Open **Explore the journey data** for time ranges and individual sessions.
 
 The generated test and paired receipts form the browser proof. The time-range report also shows variant IDs and session timestamps, so representative shopper journeys can be inspected without spending Kane credits on every simulated user. The proposed k6/Locust hybrid commands from later feedback are not part of this implementation; there is no load-tested checkout API or measured 500-user run to claim.

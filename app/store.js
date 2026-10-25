@@ -1,6 +1,10 @@
-import { products, loadConfig, cartOutcome, extractClaims, money } from './shared.js';
+import { products, defaults, cartOutcome, extractClaims, money } from './shared.js';
 
-const config=loadConfig();
+const config=structuredClone(defaults);
+try {
+  const response=await fetch('/api/scenario');
+  if(response.ok)config.failures.discountBreak=Boolean((await response.json()).discountBreak);
+} catch { /* The healthy default remains available if the local server is offline. */ }
 const variant=new URLSearchParams(location.search).get('variant')==='B'?'B':'A';
 const $=selector=>document.querySelector(selector);
 let cartProduct=null;
@@ -48,7 +52,7 @@ window.addEventListener('scroll',()=>{
     emitTelemetry('excessive_scroll','window', 'More than 1800 px travelled in 5 seconds');
   }
 },{passive:true});
-emitTelemetry('page_view','document','Demo storefront loaded');
+emitTelemetry('page_view','document',`Demo storefront loaded · discount fault ${config.failures.discountBreak?'on':'off'}`);
 
 const claims=extractClaims(config,variant);
 const offerCode=`FIRST${Number(config.discount)}`;

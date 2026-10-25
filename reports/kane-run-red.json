@@ -1,8 +1,8 @@
 {
-  "capturedAt": "2026-10-24T23:22:28.223Z",
+  "capturedAt": "2026-10-24T23:56:16.778Z",
   "status": "failed",
-  "executionId": "1bcb3020-0c39-419f-b3e2-6bb898c78469",
-  "evidencePack": ".testmuai/evidence/1bcb3020-0c39-419f-b3e2-6bb898c78469.evidence",
+  "executionId": "82e11c29-99d8-434e-8909-dde3e4976761",
+  "evidencePack": ".testmuai/evidence/82e11c29-99d8-434e-8909-dde3e4976761.evidence",
   "coverage": {
     "status": "written",
     "pct": 4
@@ -11,17 +11,22 @@
     {
       "test": "challenger-cart-exposes-missing-first-order-discount-2_test.md",
       "status": "failed",
-      "sessionId": "4c32125d-59b5-40ae-aa75-0cd559b7c56c",
+      "sessionId": "144d46c4-27d5-4162-861b-cd11162aa8b4",
       "failure": "AP determined agent is stuck — no viable actions remain",
-      "failureKind": "product"
+      "failureKind": "product",
+      "observedCart": {
+        "discount": "-$0.00",
+        "total": "$189.00",
+        "source": "confirmed product verdict signals"
+      }
     }
   ],
   "failedAssertions": [],
   "confirmedProductBugs": [
     {
       "test": "challenger-cart-exposes-missing-first-order-discount-2_test.md",
-      "title": "First-order discount is not applied to an eligible Halo cart",
-      "detail": "The cart shows no FIRST20 discount after Halo Wireless Headphones were added, so the displayed total remains full price.",
+      "title": "First-order discount remains unapplied in eligible cart",
+      "detail": "The cart shows the Halo Wireless Headphones but does not apply the advertised first-order 20% discount.",
       "confidence": 0.98
     }
   ]

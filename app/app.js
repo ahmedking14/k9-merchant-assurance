@@ -1,160 +1,126 @@
-import { products, personas, failureTypes, defaults, loadConfig, storeConfig, evaluateShopper, extractClaims, money } from './shared.js';
+import { defaults, products, personas, evaluateShopper, money } from './shared.js';
 import { initReports, refreshReport } from './reports.js';
-import { initKaneReport } from './kane-report.js';
 import { initAssurance, refreshAssurance } from './assurance.js';
 
-let config=loadConfig();
-let plannerReady=false;
-let lastRun=null;
+const $ = selector => document.querySelector(selector);
+const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
+let scenario = null;
+let latestSimulation = null;
 
-const $=selector=>document.querySelector(selector);
-const $$=selector=>[...document.querySelectorAll(selector)];
-const escapeHtml=value=>String(value).replace(/[&<>"']/g,char=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[char]));
-
-function showView(name){
-  $$('.view').forEach(view=>view.classList.toggle('active',view.id===`view-${name}`));
-  $$('.nav-item').forEach(item=>item.classList.toggle('active',item.dataset.view===name));
-  $('#breadcrumb').textContent=name.toUpperCase().replace('-',' ');
-  if(name==='evidence'){refreshReport({updateInputs:true});refreshAssurance();}
-  window.scrollTo({top:0,behavior:'smooth'});
+function modelConfig() {
+  const config = structuredClone(defaults);
+  config.failures = Object.fromEntries(Object.keys(config.failures).map(key => [key, key === 'discountBreak' && scenario?.discountBreak]));
+  return config;
 }
 
-function simulationEvents(rows, plans, variant) {
-  const checkTargets={'Promised discount':'#cartFooter .cart-line.discount','Offer eligibility':'#cartFooter .cart-line.discount','Price consistency':'.cart-product b','Free shipping':'.cart-promises','Return promise':'.cart-promises','Warranty copy':'.cart-promises','Availability':'.cart-promises'};
-  return rows.flatMap(row => {
-    const sessionId=crypto.randomUUID();
-    const persona=personas.find(item=>item.id===row.personaId);
-    const product=products.find(item=>item.id===row.productId);
-    const timestamp=new Date().toISOString();
-    const common={sessionId,source:'simulated',variant,personaId:persona?.name||row.personaId,productId:row.productId,timestamp};
-    const create=(eventType,step,element,detail,pageUrl)=>({...common,eventType,step,element,detail,pageUrl});
-    const failed=row.checks.filter(check=>!check.pass);
-    return [
-      create('session_start',0,'journey',plans.find(plan=>plan.personaId===row.personaId)?.intent||'', '/store.html?variant='+variant),
-      create('claim_view',1,'#offerCopy',config.offerCopy,'/store.html?variant='+variant),
-      create('product_view',2,`[data-product="${row.productId}"]`,product?.name||'', '/store.html?variant='+variant+'#products'),
-      create('add_to_cart',3,'[data-add]',product?.name||'', '/store.html?variant='+variant+'#products'),
-      create('checkout_review',4,'#cartDrawer',`Total ${money(row.outcome.total)}`,'/store.html?variant='+variant),
-      ...(failed.length ? failed.map((check,offset)=>create('claim_mismatch',5+offset,checkTargets[check.name]||'#cartDrawer',`${check.name}: ${check.detail}`,'/store.html?variant='+variant)) : [create('claim_match',5,'#cartDrawer','All assigned promise checks passed','/store.html?variant='+variant)])
-    ];
+function simulationEvents(rows, variant, startedAt) {
+  const steps = ['session_start', 'claim_view', 'product_view', 'add_to_cart', 'checkout_review'];
+  return rows.flatMap((row, index) => {
+    const sessionId = crypto.randomUUID();
+    const product = products.find(item => item.id === row.productId);
+    const persona = personas.find(item => item.id === row.personaId);
+    const base = Date.parse(startedAt) + index * 180;
+    const common = { sessionId, source: 'simulated', variant, personaId: persona?.name || row.personaId, productId: row.productId, pageUrl: `/store.html?variant=${variant}` };
+    const event = (eventType, step, element, detail) => ({ ...common, eventType, step, element, detail, timestamp: new Date(base + step * 30).toISOString() });
+    const events = steps.map((type, step) => event(type, step, ['journey', '#announcement', '#productGrid', '[data-add]', '#cartDrawer'][step], [persona?.goal || '', '20% off first order', product?.name || '', product?.name || '', `Cart total ${money(row.outcome.total)}`][step]));
+    const failed = row.checks.filter(check => !check.pass);
+    if (failed.length) events.push(...failed.map((check, offset) => event('claim_mismatch', 5 + offset, '#cartFooter .cart-line', `${check.name}: ${check.detail}`)));
+    else events.push(event('claim_match', 5, '#cartFooter', 'Assigned promise checks passed'));
+    return events;
   });
 }
 
-function renderFailures(){
-  $('#failureToggles').innerHTML=failureTypes.map(item=>`<label class="toggle-row"><input type="checkbox" data-failure="${item.id}" ${config.failures[item.id]?'checked':''}/><span><strong>${item.name}</strong><small>${item.detail}</small></span><span class="probe-category">${item.category}</span></label>`).join('');
-  $('#probeMetric').textContent=String(Object.values(config.failures).filter(Boolean).length).padStart(2,'0');
+function renderSimulation() {
+  if (!latestSimulation) return;
+  const { control, challenger, scenario: runScenario, startedAt } = latestSimulation;
+  const rate = rows => Math.round(rows.filter(row => row.pass).length / rows.length * 100);
+  const aRate = rate(control), bRate = rate(challenger);
+  const failures = challenger.filter(row => !row.pass);
+  const example = challenger.find(row => row.personaId === 'deal' && row.productId === 'headphones') || challenger.find(row => row.personaId === 'deal');
+  const faulted = Boolean(runScenario.discountBreak);
+  $('#simulationStatus').textContent = `${challenger.length} JOURNEYS`;
+  $('#simulationStatus').className = `status-chip ${failures.length ? 'bad' : 'good'}`;
+  $('#simulationResult').innerHTML = `<div class="comparison-bars"><div class="comparison-row"><strong>Control A</strong><div class="comparison-track"><i style="width:${aRate}%"></i></div><b>${aRate}%</b></div><div class="comparison-row challenger ${failures.length ? 'bad' : ''}"><strong>Challenger B</strong><div class="comparison-track"><i style="width:${bRate}%"></i></div><b>${bRate}%</b></div><p class="comparison-summary"><strong>${failures.length ? `${failures.length} shopper journey${failures.length === 1 ? '' : 's'} found a broken promise.` : 'No broken promise in this local comparison.'}</strong><br/>${example ? `Deal Hunter bag: ${money(example.outcome.discount)} off · ${money(example.outcome.total)} total.` : ''} ${faulted ? 'The discount fault was on in B.' : 'The repaired discount was on in both variants.'}</p><p class="inline-note">Modelled at ${escapeHtml(new Date(startedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }))}. Kane’s separate Chrome run checks the real cart next.</p></div>`;
+  $('#flowSimulation').className = `architecture-node ${failures.length ? 'bad' : 'good'}`;
 }
 
-function renderPersonas(){
-  $('#shopperGrid').innerHTML=personas.map((persona,index)=>`<article class="shopper-card"><span class="shopper-number">AGENT 0${index+1} / ${persona.id.toUpperCase()}</span><div class="shopper-icon">${persona.icon}</div><h3>${persona.name}</h3><p>${persona.blurb}</p><span class="goal">MISSION: ${persona.goal.toUpperCase()}</span></article>`).join('');
+async function loadScenario() {
+  const response = await fetch('/api/scenario');
+  if (!response.ok) throw new Error('Could not load the shared storefront scenario');
+  scenario = await response.json();
+  $('#scenarioFault').checked = scenario.discountBreak;
+  $('#scenarioStatus').textContent = scenario.discountBreak ? 'Fault active in challenger B. The real demo store and Kane will see it.' : 'Repaired discount active in both variants. Kane will check this same state.';
+  $('#runSimulation').disabled = false;
+  const stored = localStorage.getItem('k9-merchant-run-v2');
+  if (stored) {
+    try {
+      const saved = JSON.parse(stored);
+      if (saved.scenario?.updatedAt === scenario.updatedAt && saved.scenario?.discountBreak === scenario.discountBreak) {
+        latestSimulation = saved;
+        renderSimulation();
+      }
+    } catch { /* Ignore a stale local preview. */ }
+  }
+  refreshAssurance();
 }
 
-function populateFields(){
-  $('#offerCopy').value=config.offerCopy;
-  $('#heroCopy').value=config.heroCopy;
-  $('#variantCopy').value=config.variantCopy;
-  $('#baseDiscount').value=config.discount;
-  $('#freeShipping').value=config.freeShipping;
-  $('#priceShift').value=config.priceShift;
-  $('#swarmSize').value=String(config.swarmSize);
-  renderClaims();
-}
-
-function renderClaims(){
-  const claims=extractClaims(config,'B');
-  $('#claimReadout').innerHTML=`<span class="eyebrow">COPY → CHECKABLE CLAIMS</span><div><b>${claims.discountPercent}%</b><small>first-order offer</small></div><div><b>${money(claims.freeShippingThreshold)}</b><small>free shipping above</small></div><div><b>${claims.warrantyYears} yr</b><small>variant B warranty claim</small></div><div><b>${claims.returnDays} days</b><small>return window</small></div>`;
-}
-
-function saveFields(){
-  config.offerCopy=$('#offerCopy').value.trim()||defaults.offerCopy;
-  config.heroCopy=$('#heroCopy').value.trim()||defaults.heroCopy;
-  config.variantCopy=$('#variantCopy').value.trim()||defaults.variantCopy;
-  config.discount=Math.max(0,Math.min(90,Number($('#baseDiscount').value)||0));
-  config.freeShipping=Math.max(0,Number($('#freeShipping').value)||0);
-  config.priceShift=Math.max(1,Math.min(100,Number($('#priceShift').value)||12));
-  config.swarmSize=[5,25,100].includes(Number($('#swarmSize').value))?Number($('#swarmSize').value):5;
-  $$('[data-failure]').forEach(input=>{config.failures[input.dataset.failure]=input.checked});
-  storeConfig(config);
-  $('#probeMetric').textContent=String(Object.values(config.failures).filter(Boolean).length).padStart(2,'0');
-  $('#shopperMetric').textContent=String(config.swarmSize).padStart(2,'0');
-  $('.promise-box strong').textContent=`“${config.offerCopy}”`;
-  renderClaims();
-}
-
-function defaultPlans(){return personas.map(persona=>({personaId:persona.id,productId:persona.defaultProduct,intent:persona.goal,reason:persona.blurb}));}
-
-async function getPlans(){
-  if(!plannerReady)return {plans:defaultPlans(),source:'demo planner'};
-  try{
-    const response=await fetch('/api/plan',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({personas:personas.map(({id,name,blurb,goal})=>({id,name,blurb,goal})),offer:config.offerCopy})});
-    if(!response.ok)throw new Error('Planner request failed');
-    const data=await response.json();
-    return {plans:personas.map(persona=>data.plans.find(plan=>plan.personaId===persona.id)||defaultPlans().find(plan=>plan.personaId===persona.id)),source:'OpenAI shopper planner'};
-  }catch{return {plans:defaultPlans(),source:'demo planner (OpenAI unavailable)'};}
-}
-
-function runSummary(rows){return {passed:rows.filter(row=>row.pass).length,total:rows.length,rate:Math.round(rows.filter(row=>row.pass).length/rows.length*100)};}
-
-function renderRun(){
-  const {a,b,source,plans}=lastRun;
-  const sa=runSummary(a),sb=runSummary(b);
-  $('#resultsEmpty').hidden=true;
-  $('#resultsContent').hidden=false;
-  $('#runMode').textContent=source.toUpperCase();
-  $('#passMetric').textContent=`${sb.rate}%`;
-  $('.experiment-summary .status-pill').textContent='RUN COMPLETE';
-  $('#passMetricNote').innerHTML=`challenger promise kept <b>↗</b>`;
-  const renderColumn=(label,code,rows,summary)=>`<article class="result-column"><span class="variant-tag ${code==='A'?'control':'challenger'}">${code}</span><h3>${label}</h3><strong class="big">${summary.rate}%</strong><small>${summary.passed} of ${summary.total} shopper runs cleared their promise checks</small><div class="result-list">${personas.map(persona=>{const group=rows.filter(row=>row.personaId===persona.id);const passes=group.filter(row=>row.pass).length;const failed=group.find(row=>!row.pass)?.checks.find(check=>!check.pass);return `<div><span>${persona.name}</span><b class="${passes===group.length?'pass':'fail'}">${passes}/${group.length} ${failed?escapeHtml(failed.detail):'pass'}</b></div>`}).join('')}</div></article>`;
-  $('#resultsContent').innerHTML=`<div class="result-banner">${renderColumn('Control A','A',a,sa)}${renderColumn('Challenger B','B',b,sb)}</div><p class="result-explainer">${escapeHtml(source)} selected shopper intents. The local evaluator calculated store outcomes; this is not a Kane CLI browser run. Open the store and run Kane separately for independent evidence.</p>`;
-  $('#activityPreview').innerHTML=personas.map(persona=>{const group=b.filter(row=>row.personaId===persona.id);const pass=group.filter(row=>row.pass).length;const plan=plans.find(p=>p.personaId===persona.id);return `<div class="activity-row"><div class="activity-bubble">${persona.initials}</div><div><strong>${persona.name}</strong><small>${escapeHtml(plan.intent)}</small></div><span class="${pass===group.length?'pass':'fail'}">${pass}/${group.length}</span></div>`}).join('');
-  $('#localEvidenceStatus').textContent='RUN COMPLETE';
-  $('#localEvidence').innerHTML=`<strong>Control A: ${sa.rate}% · Challenger B: ${sb.rate}%</strong><br/>${b.filter(row=>!row.pass).length} shopper journeys found a mismatch. Planner: ${escapeHtml(source)}. This is a local simulation, not a Kane evidence pack.`;
-  showView('experiment');
-  $('#resultsWrap').scrollIntoView({behavior:'smooth',block:'start'});
-}
-
-async function runSwarm(button){
-  saveFields();
-  $$('.primary-button').forEach(item=>{item.disabled=true;item.dataset.original=item.innerHTML;item.textContent='Shoppers are thinking…'});
-  const {plans,source}=await getPlans();
-  const selectProduct=persona=>products.find(product=>product.id===plans.find(plan=>plan.personaId===persona.id)?.productId)||products.find(product=>product.id===persona.defaultProduct);
-  const cohort=Array.from({length:config.swarmSize},(_,index)=>{const persona=personas[index%personas.length];const base=selectProduct(persona);const product=index<personas.length?base:products[(products.indexOf(base)+Math.floor(index/personas.length))%products.length];return {persona,product};});
-  const a=cohort.map(({persona,product})=>evaluateShopper(persona,product,'A',config));
-  const b=cohort.map(({persona,product})=>evaluateShopper(persona,product,'B',config));
-  lastRun={a,b,plans,source:config.swarmSize>5?`${source} · deterministic cohort expansion`:source,time:new Date().toISOString()};
-  localStorage.setItem('swarm-last-run',JSON.stringify(lastRun));
+async function changeScenario() {
+  const input = $('#scenarioFault');
+  input.disabled = true;
+  $('#scenarioStatus').textContent = 'Updating the shared demo store…';
   try {
-    await fetch('/api/telemetry/events',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({events:[...simulationEvents(a,plans,'A'),...simulationEvents(b,plans,'B')]})});
-    refreshReport({updateInputs:true});
+    const response = await fetch('/api/scenario', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ discountBreak: input.checked }) });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || 'Could not change the scenario');
+    scenario = data;
+    latestSimulation = null;
+    localStorage.removeItem('k9-merchant-run-v2');
+    $('#simulationStatus').className = 'status-chip';
+    $('#simulationStatus').textContent = 'RERUN NEEDED';
+    $('#simulationResult').innerHTML = '<div class="empty-state"><span class="empty-glyph">◎</span><strong>The scenario changed.</strong><p>Compare shoppers again, then rerun Kane against this same storefront state.</p></div>';
+    $('#flowSimulation').className = 'architecture-node';
+    $('#scenarioStatus').textContent = scenario.discountBreak ? 'Fault active in challenger B. The real demo store and Kane will see it.' : 'Repaired discount active in both variants. Kane will check this same state.';
     refreshAssurance();
-  } catch { /* Results still work if telemetry storage is unavailable. */ }
-  setTimeout(()=>{$$('.primary-button').forEach(item=>{item.disabled=false;item.innerHTML=item.dataset.original});renderRun()},400);
+  } catch (error) {
+    input.checked = Boolean(scenario?.discountBreak);
+    $('#scenarioStatus').textContent = error.message;
+  } finally { input.disabled = false; }
 }
 
-function setPreview(variant){
-  $$('.segmented button').forEach(button=>button.classList.toggle('selected',button.dataset.preview===variant));
-  $('#storeFrame').src=`/store.html?variant=${variant}`;
-  $('#browserUrl').textContent=`monoform.objects / ?variant=${variant}`;
-  $('#popStore').href=`/store.html?variant=${variant}`;
+async function runSimulation() {
+  if (!scenario) return;
+  const button = $('#runSimulation');
+  button.disabled = true;
+  button.textContent = 'Comparing…';
+  try {
+    const count = Number($('#sampleCount').value);
+    const config = modelConfig();
+    const cohort = Array.from({ length: count }, (_, index) => {
+      const persona = personas[index % personas.length];
+      const preferred = products.find(item => item.id === persona.defaultProduct);
+      return { persona, product: index < personas.length ? preferred : products[(products.indexOf(preferred) + Math.floor(index / personas.length)) % products.length] };
+    });
+    const control = cohort.map(({ persona, product }) => evaluateShopper(persona, product, 'A', config));
+    const challenger = cohort.map(({ persona, product }) => evaluateShopper(persona, product, 'B', config));
+    const startedAt = new Date().toISOString();
+    latestSimulation = { control, challenger, scenario: { ...scenario }, startedAt };
+    localStorage.setItem('k9-merchant-run-v2', JSON.stringify(latestSimulation));
+    renderSimulation();
+    try {
+      await fetch('/api/telemetry/events', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ events: [...simulationEvents(control, 'A', startedAt), ...simulationEvents(challenger, 'B', startedAt)] }) });
+      refreshReport({ updateInputs: true });
+    } catch { $('#scenarioStatus').textContent = 'Comparison complete; the detailed telemetry could not be saved.'; }
+    refreshAssurance();
+  } finally { button.disabled = false; button.innerHTML = 'Compare shoppers <span>↗</span>'; }
 }
 
-async function checkPlanner(){
-  try{const response=await fetch('/api/status');const data=await response.json();plannerReady=data.openaiReady;$('#connection').classList.toggle('live',plannerReady);$('#connection').innerHTML=`<i></i> ${plannerReady?'OpenAI planner ready':'Demo planner active'}`;}
-  catch{$('#connection').innerHTML='<i></i> Demo planner active';}
-}
-
-function init(){
-  populateFields();renderFailures();renderPersonas();checkPlanner();initReports();initKaneReport();initAssurance();
-  document.addEventListener('pointerup',event=>{const target=event.target.closest('button');if(!target||target.disabled)return;target.classList.remove('settle-pulse');void target.offsetWidth;target.classList.add('settle-pulse');setTimeout(()=>target.classList.remove('settle-pulse'),450)});
-  $$('.nav-item').forEach(button=>button.addEventListener('click',()=>showView(button.dataset.view)));
-  $$('[data-jump]').forEach(button=>button.addEventListener('click',()=>showView(button.dataset.jump)));
-  ['heroRun','experimentRun','shopperRun'].forEach(id=>$('#'+id).addEventListener('click',runSwarm));
-  $('#focusDemo').addEventListener('click',event=>{config=structuredClone(defaults);populateFields();renderFailures();runSwarm(event.currentTarget);});
-  $$('#view-experiment input,#view-experiment textarea,#view-experiment select').forEach(input=>input.addEventListener('change',saveFields));
-  $$('.segmented button').forEach(button=>button.addEventListener('click',()=>setPreview(button.dataset.preview)));
-  const savedReport=localStorage.getItem('swarm-kane-report');if(savedReport){$('#kaneReport').value=savedReport;$('#kaneLink').href=savedReport;$('#kaneLink').hidden=false;$('#kaneStatus').textContent='LINK SAVED';}
-  $('#saveKane').addEventListener('click',()=>{try{const url=new URL($('#kaneReport').value);if(!['https:','http:'].includes(url.protocol))throw new Error();localStorage.setItem('swarm-kane-report',url.href);$('#kaneLink').href=url.href;$('#kaneLink').hidden=false;$('#kaneStatus').textContent='LINK SAVED';}catch{alert('Enter a valid report URL.')}});
-  const savedRun=localStorage.getItem('swarm-last-run');if(savedRun){try{lastRun=JSON.parse(savedRun);renderRun();showView('overview')}catch{}}
+function init() {
+  $('#runSimulation').disabled = true;
+  $('#scenarioFault').addEventListener('change', changeScenario);
+  $('#runSimulation').addEventListener('click', runSimulation);
+  initReports();
+  initAssurance();
+  loadScenario().catch(error => { $('#scenarioStatus').textContent = error.message; });
 }
 
 init();

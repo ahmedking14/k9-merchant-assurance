@@ -4,13 +4,18 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createTelemetryStore } from './telemetry.mjs';
 import { createAssurance } from './assurance.mjs';
+import { createScenarioStore } from './scenario.mjs';
+import { createKaneRunner } from './kane-runner.mjs';
 
 const projectRoot = path.dirname(fileURLToPath(import.meta.url));
 const root = path.join(projectRoot, 'app');
 const telemetry = createTelemetryStore(path.join(projectRoot, 'data', 'telemetry.jsonl'));
-const assurance = createAssurance(projectRoot, telemetry);
+const scenario = await createScenarioStore(path.join(projectRoot, 'data', 'scenario.json'));
+const kaneRunner = createKaneRunner(projectRoot);
+const assurance = createAssurance(projectRoot, telemetry, () => scenario.get());
 const port = Number(process.env.PORT || 4173);
 const types = { '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg', '.webp': 'image/webp' };
+const allowedOrigins = new Set([`http://localhost:${port}`, `http://127.0.0.1:${port}`]);
 
 function json(res, code, body) {
   res.writeHead(code, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
@@ -52,6 +57,13 @@ const server = http.createServer(async (req, res) => {
   try {
     const url = new URL(req.url, `http://${req.headers.host}`);
     if (url.pathname === '/api/status') return json(res, 200, { openaiReady: Boolean(process.env.OPENAI_API_KEY), model: process.env.OPENAI_API_KEY ? (process.env.OPENAI_MODEL || 'gpt-4o-mini') : null });
+    if (url.pathname === '/api/scenario' && req.method === 'GET') return json(res, 200, scenario.get());
+    if (url.pathname === '/api/scenario' && req.method === 'POST') {
+      if (!allowedOrigins.has(req.headers.origin)) return json(res, 403, { error: 'Open K9 on this local server to change the scenario' });
+      if (kaneRunner.status().state === 'running') return json(res, 409, { error: 'Wait for Kane to finish before changing the storefront scenario' });
+      try { return json(res, 200, await scenario.set((await readBody(req)).discountBreak)); }
+      catch (error) { return json(res, 400, { error: error.message }); }
+    }
     if (url.pathname === '/api/plan' && req.method === 'POST') {
       if (!process.env.OPENAI_API_KEY) return json(res, 503, { error: 'OpenAI API key is not configured' });
       return json(res, 200, { plans: await planWithOpenAI(await readBody(req)), source: 'openai' });
@@ -74,7 +86,25 @@ const server = http.createServer(async (req, res) => {
       try { return json(res, 200, { events: await telemetry.session(url.searchParams.get('sessionId')) }); }
       catch (error) { return json(res, 400, { error: error.message }); }
     }
-    if (url.pathname === '/api/assurance/status' && req.method === 'GET') return json(res, 200, await assurance.status());
+    if (url.pathname === '/api/assurance/status' && req.method === 'GET') {
+      const status = await assurance.status();
+      const currentScenario = scenario.get();
+      return json(res, 200, { ...status, scenario: currentScenario, job: kaneRunner.status(), verificationCurrent: Boolean(status.run && (!currentScenario.updatedAt || Date.parse(status.run.capturedAt) >= Date.parse(currentScenario.updatedAt))) });
+    }
+    if (url.pathname.startsWith('/api/assurance/evidence/') && req.method === 'GET') {
+      const executionId = url.pathname.split('/').at(-1);
+      const status = await assurance.status();
+      const available = [status.run, status.redRun, status.greenRun, status.controlRun].some(run => run?.executionId === executionId);
+      if (!available || !/^[0-9a-f-]{36}$/.test(executionId)) return json(res, 404, { error: 'Evidence pack not found' });
+      const evidence = await readFile(path.join(projectRoot, '.testmuai', 'evidence', `${executionId}.evidence`));
+      res.writeHead(200, { 'Content-Type': 'application/zip', 'Content-Disposition': `attachment; filename="k9-kane-${executionId}.zip"`, 'Cache-Control': 'no-store' });
+      return res.end(evidence);
+    }
+    if (url.pathname === '/api/assurance/run' && req.method === 'POST') {
+      if (!allowedOrigins.has(req.headers.origin)) return json(res, 403, { error: 'Open K9 on this local server to run Kane' });
+      try { return json(res, 202, kaneRunner.launch((await readBody(req)).target)); }
+      catch (error) { return json(res, 409, { error: error.message }); }
+    }
     if (url.pathname === '/api/assurance/triage' && req.method === 'POST') {
       try { return json(res, 200, await assurance.triage(await readBody(req))); }
       catch (error) { return json(res, 400, { error: error.message }); }
