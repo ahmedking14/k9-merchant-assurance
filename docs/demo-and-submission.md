@@ -13,9 +13,9 @@ Do not call local simulator output Kane evidence. The real Kane run and sealed p
 
 ## Proof to collect
 
-- A public repository containing today's code, README, runnable command, requirements, and the exact final commit SHA.
+- A repository accessible to judges containing today's code, README, runnable command, requirements, and the exact final commit SHA. The repository is currently private; grant access or publish it before submission.
 - A live URL or a run command that works on a fresh machine.
-- Failed and passing Kane run links; attach the required evidence pack through the event submission flow. Keep raw evidence packs private because they may include network logs or secrets.
+- Failed and passing Kane proof, including the three reviewed packs now committed in `evidence/`. Future raw packs need inspection before sharing because network logs may contain secrets. Attach the required pack through the event submission flow.
 - A short explanation of the OpenAI component and the exact point where Kane caused the agent to change code.
 - Known limitations, including that 25- and 100-shopper cohorts expand five archetype plans deterministically and that the storefront uses fictional products.
 

@@ -15,4 +15,4 @@ await writeFile(path.join(output, 'hosted', 'status.json'), JSON.stringify({
   job: { state: 'idle', message: null, phase: 'ready', step: 0 },
   hosted: true
 }));
-console.log('Built static hosted demo with archived Kane metadata. Raw evidence packs remain local.');
+console.log('Built static hosted demo with archived Kane metadata and proof screenshots. Full evidence packs remain in the private repository.');

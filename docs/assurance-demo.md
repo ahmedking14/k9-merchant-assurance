@@ -31,7 +31,7 @@ kane-cli cover --mode agent | tee reports/coverage.ndjson
 node scripts/capture-assurance.mjs coverage reports/coverage.ndjson
 ```
 
-The `reports/*.ndjson` streams and sealed evidence packs stay local. The capture script writes small, shareable receipts in `reports/kane-run-red.json`, `reports/kane-run-green.json`, and `reports/coverage.json`. Commit the generated `_test.md` files and these JSON outputs after inspecting them; keep `.context/` out of Git. The merchant report card reads these artifacts on refresh. Its **Run Kane** button runs the already approved t-4 test, shows live Chrome actions from Kane's session log, captures `reports/kane-run.json`, updates coverage, and shows the exact cart values Kane observed. The latest sealed pack can be downloaded from the report card. That button uses Kane credits; the page says so before it is pressed.
+The `reports/*.ndjson` streams stay local. Three reviewed and validated sealed packs are committed in [`evidence/`](../evidence/README.md); later packs remain ignored until inspected. The capture script writes small, shareable receipts in `reports/kane-run-red.json`, `reports/kane-run-green.json`, and `reports/coverage.json`. Commit Kane-generated `_test.md` files and these JSON outputs after inspecting them; keep `.context/` out of Git. The merchant report card reads these artifacts on refresh. Its **Run Kane** button runs the already approved t-4 test, shows live Chrome actions from Kane's session log, captures `reports/kane-run.json`, updates coverage, and shows the exact cart values Kane observed. The latest sealed pack can be downloaded from the report card. That button uses Kane credits; the page says so before it is pressed.
 
 ### Initial run diagnosis
 
@@ -42,6 +42,8 @@ Kane `maintain evolve t-1` generated replacement `t-4`. The first replacement ru
 The repair changed the challenger default to apply the 20% offer, leaving the fault available as an explicit simulator toggle. The same `t-4` test then passed with a `$189.00` subtotal, `-$37.80` discount, and `$151.20` total before any order. Evidence pack: `03c84a33-e069-4513-b782-e3a932e31db9`. The saved **13.4%** coverage figure is a historical project-wide snapshot, not a claim that all six use cases were tested.
 
 The approved control test `t-2` was replayed after the copy change and also passed. Its receipt is `reports/kane-run-control.json`; evidence pack: `618bc796-3aa8-4570-b48d-25f2d615c476`.
+
+A later `kane-cli testrun run` replayed `t-4` and `t-2` together: **2 of 2 passed in 36 seconds**. The NDJSON parser captured [`reports/kane-suite.json`](../reports/kane-suite.json), and Kane validated the [one sealed suite pack](../evidence/73ced7dc-3fe6-4d36-a7a6-6a1509a1ccba.evidence). Run the same selection with `npm run kane:ci`; the [PR workflow](../.github/workflows/kane-suite.yml) uploads NDJSON, the receipt, and the evidence pack as a private Actions artifact. Repository secrets and a required branch check remain setup steps; no remote CI pass is claimed yet.
 
 ## Agent handoff
 

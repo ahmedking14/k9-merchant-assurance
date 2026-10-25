@@ -23,6 +23,8 @@ assert.equal(status.run, null);
 assert.equal(status.redRun.confirmedProductBugs.length > 0, true);
 assert.equal(status.greenRun.status, 'passed');
 assert.equal((await api('/api/assurance/run', { method: 'POST' })).status, 501);
+const proofPage = await readFile(new URL('../dist/proof.html', import.meta.url), 'utf8');
+assert.match(proofPage, /A failed cart/);
 
 const now = new Date().toISOString();
 const sample = { sessionId: 'sample-session-123', source: 'simulated', variant: 'B', personaId: 'Deal Hunter', productId: 'headphones', eventType: 'claim_mismatch', element: '#cartFooter', pageUrl: '/store.html?variant=B', detail: 'Discount missing', timestamp: now, step: 1 };
@@ -32,4 +34,4 @@ const report = (await api('/api/reports/friction?' + range)).body;
 assert.equal(report.totalSessions, 1);
 assert.equal(report.counts.claim_mismatch, 1);
 assert.equal((await api('/api/reports/session?sessionId=sample-session-123')).body.events.length, 1);
-console.log('Hosted demo scenario, archived Kane proof, local telemetry, and disabled live run verified.');
+console.log('Hosted demo scenario, proof page, local telemetry, and disabled live run verified.');

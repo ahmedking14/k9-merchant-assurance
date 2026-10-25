@@ -2,6 +2,19 @@
 
 A Kane CLI Hack Day project: simulated shoppers challenge a specific storefront promise, and Kane can verify the real browser journey.
 
+[Live merchant cockpit](https://k9-merchant-assurance.vercel.app/) · [Visual proof trail](https://k9-merchant-assurance.vercel.app/proof.html)
+
+## Judging proof at a glance
+
+| What to verify | Where the proof lives |
+| --- | --- |
+| A real journey found a bug, then passed after repair | [Failed Kane pack](evidence/1bcb3020-0c39-419f-b3e2-6bb898c78469.evidence) shows `-$0.00` and `$189.00`; the [passing pack](evidence/03c84a33-e069-4513-b782-e3a932e31db9.evidence) shows `-$37.80` and `$151.20` for the same generated challenger test. [Visual comparison](https://k9-merchant-assurance.vercel.app/proof.html). |
+| The coding agent read Kane and changed course | The first generated test misread the cart; Kane generated reviewed replacement `t-4`. After Kane confirmed the product defect, the [repair commit](https://github.com/ahmedking14/k9-merchant-assurance/commit/20a7aeafdec80b454b0855614c1f995b4dab07b6) changed the challenger default, and the same test passed. The exact sequence is in [the assurance runbook](docs/assurance-demo.md). |
+| Kane went beyond an ad hoc run | [Approved generated `_test.md` files](.testmuai/tests), committed replay recordings, [two-test suite receipt](reports/kane-suite.json), [validated suite pack](evidence/73ced7dc-3fe6-4d36-a7a6-6a1509a1ccba.evidence), [coverage receipt](reports/coverage.json), and [PR workflow](.github/workflows/kane-suite.yml). |
+| A reviewer can run the project | `npm run dev` starts the local app with no install step. `npm run check` checks the product contract. An authenticated Kane CLI can run `npm run kane:ci` while the app is running. [Evidence manifest and hashes](evidence/README.md). |
+
+The GitHub PR workflow is committed but cannot run successfully until `KANE_USERNAME` and `KANE_ACCESS_KEY` secrets are added. It becomes a merge gate only after **Kane cart suite** is required by a branch rule. The focused discount use case has 3 of 4 criteria proven; the wider six-use-case brief is not fully covered.
+
 ## One-sentence pitch
 
 Five shopper archetypes pursue goals rooted in a store claim. The app compares control and challenger journeys, and Kane independently verifies the real browser cart. A confirmed challenger discount defect was repaired and the same generated Kane test passed on rerun.
@@ -45,6 +58,6 @@ For CI, add repository secrets `KANE_USERNAME` and `KANE_ACCESS_KEY`, then requi
 
 ## Hosted demo
 
-`vercel.json` builds a static deployment with a browser-local scenario and telemetry store. The Vercel site supports the A/B comparison, storefront, guided walkthrough, time-range report, and clearly marked archived Kane receipts. Fresh Kane CLI runs, evidence-pack downloads, and OpenAI triage require the local Node app and its configured credentials; the hosted site disables those actions rather than claiming a fresh verification. Raw `.evidence` packs are deliberately excluded from the public build.
+`vercel.json` builds a static deployment with a browser-local scenario and telemetry store. The Vercel site supports the A/B comparison, storefront, guided walkthrough, time-range report, and clearly marked archived Kane receipts. The separate proof page shows screenshots from the failed and passing packs. Full packs stay in the private repository because they include account metadata. Fresh Kane CLI runs, new evidence packs, and OpenAI triage require the local Node app and its configured credentials; the hosted site disables those actions rather than claiming a fresh verification.
 
 The storefront and control room use real stock photographs from Unsplash as fictional demo imagery under the [Unsplash License](https://unsplash.com/license). Products and brand are invented; no purchases or payments occur.
