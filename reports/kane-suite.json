@@ -1,0 +1,29 @@
+{
+  "capturedAt": "2026-10-25T00:35:31.912Z",
+  "executionId": "73ced7dc-3fe6-4d36-a7a6-6a1509a1ccba",
+  "status": "passed",
+  "exitCode": 0,
+  "totals": {
+    "tests": 2,
+    "passed": 2,
+    "failed": 0,
+    "broken": 0,
+    "skipped": 0,
+    "authored": 0
+  },
+  "durationSeconds": 36.441,
+  "evidenceIngest": "ok",
+  "evidencePack": ".testmuai/evidence/73ced7dc-3fe6-4d36-a7a6-6a1509a1ccba.evidence",
+  "members": [
+    {
+      "test": "challenger-cart-exposes-missing-first-order-discount-2_test.md",
+      "status": "passed",
+      "failure": null
+    },
+    {
+      "test": "control-cart-honors-first-order-discount_test.md",
+      "status": "passed",
+      "failure": null
+    }
+  ]
+}

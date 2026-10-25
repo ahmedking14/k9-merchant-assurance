@@ -1,0 +1,27 @@
+{
+  "commit_id": "a3e9ee88-623a-4bd9-a21f-77a4f9827218",
+  "test_id": "924215c4-ca9b-48ac-a40a-362a4e5407c6",
+  "testcase_id": "01M5R37FVZDRGC23372PRJ8KKM",
+  "project_id": "01M5R1TGJ1NWR7HB9ADNGCGMAA",
+  "folder_id": "01M5R1TGVAH3PWYFPANB2GEHMY",
+  "org_id": "3399533",
+  "session_name": "challenger-cart-exposes-missing-first-order-discount-2",
+  "executions": [
+    {
+      "execution_id": "25a9fab4-87f8-49f4-beb4-c7c8ec639db9",
+      "run_kind": "author",
+      "status": "passed",
+      "valid": true,
+      "uploaded": true,
+      "at": "2026-10-25T00:02:44.609Z"
+    },
+    {
+      "execution_id": "73ced7dc-3fe6-4d36-a7a6-6a1509a1ccba",
+      "run_kind": "replay",
+      "status": "passed",
+      "valid": true,
+      "uploaded": true,
+      "at": "2026-10-25T00:35:31.906Z"
+    }
+  ]
+}

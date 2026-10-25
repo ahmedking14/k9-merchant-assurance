@@ -1,0 +1,49 @@
+name: Kane saved suite
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  kane:
+    name: Kane cart suite
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      contents: read
+    env:
+      CI: 'true'
+      KANE_USERNAME: ${{ secrets.KANE_USERNAME }}
+      KANE_ACCESS_KEY: ${{ secrets.KANE_ACCESS_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - uses: browser-actions/setup-chrome@v2
+      - name: Install dependencies and Kane CLI
+        run: npm install -g @testmuai/kane-cli@0.10.0-rc.3
+      - name: Start local storefront
+        run: |
+          npm run dev > reports/server.log 2>&1 &
+          for attempt in {1..30}; do
+            if curl -fsS http://127.0.0.1:4173/api/status > /dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat reports/server.log
+          exit 1
+      - name: Run saved Kane suite and validate evidence
+        run: npm run kane:ci
+      - name: Preserve NDJSON, summary, and sealed evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: kane-suite-${{ github.run_id }}
+          path: |
+            reports/kane-suite.ndjson
+            reports/kane-suite.stderr
+            reports/kane-suite.json
+            reports/server.log
+            .testmuai/evidence/*.evidence
+          if-no-files-found: warn
+          retention-days: 14

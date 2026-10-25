@@ -9,6 +9,7 @@ launch/
 data/
 reports/*.ndjson
 reports/*.log
+reports/*.stderr
 .testmuai/output-*/
 output-*/
 .testmuai/evidence/
