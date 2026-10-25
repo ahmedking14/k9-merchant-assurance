@@ -1,6 +1,7 @@
 import { defaults, products, personas, evaluateShopper, money } from './shared.js';
 import { initReports, refreshReport } from './reports.js';
 import { initAssurance, refreshAssurance } from './assurance.js';
+import { initWalkthrough } from './walkthrough.js';
 
 const $ = selector => document.querySelector(selector);
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
@@ -81,9 +82,11 @@ async function changeScenario() {
     $('#flowSimulation').className = 'architecture-node';
     $('#scenarioStatus').textContent = scenario.discountBreak ? 'Fault active in challenger B. The real demo store and Kane will see it.' : 'Repaired discount active in both variants. Kane will check this same state.';
     refreshAssurance();
+    document.dispatchEvent(new CustomEvent('k9:scenario-changed', { detail: { ...scenario } }));
   } catch (error) {
     input.checked = Boolean(scenario?.discountBreak);
     $('#scenarioStatus').textContent = error.message;
+    document.dispatchEvent(new CustomEvent('k9:scenario-error', { detail: { message: error.message } }));
   } finally { input.disabled = false; }
 }
 
@@ -111,16 +114,22 @@ async function runSimulation() {
       refreshReport({ updateInputs: true });
     } catch { $('#scenarioStatus').textContent = 'Comparison complete; the detailed telemetry could not be saved.'; }
     refreshAssurance();
+    document.dispatchEvent(new CustomEvent('k9:simulation-complete', { detail: latestSimulation }));
+  } catch (error) {
+    $('#scenarioStatus').textContent = error.message;
+    document.dispatchEvent(new CustomEvent('k9:simulation-error', { detail: { message: error.message } }));
   } finally { button.disabled = false; button.innerHTML = 'Compare shoppers <span>↗</span>'; }
 }
 
-function init() {
+async function init() {
   $('#runSimulation').disabled = true;
   $('#scenarioFault').addEventListener('change', changeScenario);
   $('#runSimulation').addEventListener('click', runSimulation);
   initReports();
   initAssurance();
-  loadScenario().catch(error => { $('#scenarioStatus').textContent = error.message; });
+  try { await loadScenario(); }
+  catch (error) { $('#scenarioStatus').textContent = error.message; }
+  initWalkthrough();
 }
 
 init();

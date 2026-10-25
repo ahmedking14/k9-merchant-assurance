@@ -33,4 +33,6 @@ npm run dev
 
 Open `http://localhost:4173`. No dependencies need installing. Run `npm run check` for the store contract and telemetry range checks. The Kane action requires an authenticated `kane-cli` installation and uses the approved generated `t-4` file. To enable OpenAI triage, set `OPENAI_API_KEY` in your own terminal environment before starting the server; never commit it. The server uses the [OpenAI Responses API structured output format](https://developers.openai.com/api/docs/guides/structured-outputs).
 
+The first visit opens a guided demo. **Guided demo** in the header reopens it later. Each step activates the actual local workflow: introduce the challenger fault, compare five shoppers, inspect Kane evidence, apply the demo repair, compare again, and check the repair. Kane steps offer a deliberate **Run Kane live** button that uses credits, plus a clearly labeled saved historical receipt for a credit-free tour. The guide never presents a saved receipt as a fresh verification of the current store state.
+
 The storefront and control room use real stock photographs from Unsplash as fictional demo imagery under the [Unsplash License](https://unsplash.com/license). Products and brand are invented; no purchases or payments occur.
