@@ -35,7 +35,7 @@ if (kind === 'run') {
     const discountSignal = signals.find(signal => /^-\$\d+(?:\.\d{2})?$/.test(signal.excerpt || ''))?.excerpt;
     const totalSignal = signals.find(signal => /^\$\d+(?:\.\d{2})?$/.test(signal.excerpt || ''))?.excerpt;
     const observedCart = finalCart ? { discount: finalCart.final_state.cart_discount || null, total: finalCart.final_state.cart_total || null, source: 'recorded cart variables' } : discountSignal && totalSignal ? { discount: discountSignal, total: totalSignal, source: 'confirmed product verdict signals' } : null;
-    const failureKind = row.status === 'passed' ? null : verdict?.category === 'agent_misstep' || verdict?.family === 'automation_bug' ? 'automation' : assertion ? 'assertion' : verdict?.confirmed ? 'product' : 'unclassified';
+    const failureKind = row.status === 'passed' ? null : row.status === 'broken' ? 'infrastructure' : verdict?.category === 'agent_misstep' || verdict?.family === 'automation_bug' ? 'automation' : assertion ? 'assertion' : verdict?.confirmed ? 'product' : 'unclassified';
     const confirmedProductBug = verdict?.confirmed && verdict?.family === 'application_issue' ? {
       title: verdict.bug_title || verdict.one_liner || 'Confirmed product defect',
       detail: verdict.one_liner || '',
@@ -44,6 +44,12 @@ if (kind === 'run') {
     return { test: path.basename(row.path || ''), status: row.status, sessionId: row.session_id || null, failure: row.failure?.message || null, failureKind, observedCart, failedAssertion: assertion?.detail || null, confirmedProductBug };
   }
   const summaries = await Promise.all(members.map(summarizeMember));
+  // A run where no test reached the browser says nothing about the store; keep the last real receipt.
+  if (summaries.length && summaries.every(row => row.status === 'broken')) {
+    const reason = summaries.find(row => row.failure)?.failure?.split('\n')[0] || 'no test started';
+    console.error(`Kane could not start the browser (${reason}). No new receipt saved; the previous receipt is unchanged.`);
+    process.exit(1);
+  }
   const report = {
     capturedAt: done.ts || new Date().toISOString(),
     status: done.overall_status,
