@@ -40,6 +40,7 @@ elements.get('#guideSecondary').hidden = true;
 globalThis.localStorage = new Store();
 globalThis.sessionStorage = new Store();
 globalThis.document = new EventTarget();
+document.body = new Element();
 document.querySelector = selector => elements.get(selector) || null;
 document.createElement = () => new Element();
 
@@ -64,37 +65,48 @@ const { initWalkthrough } = await import('../app/walkthrough.js');
 initWalkthrough();
 const get = selector => elements.get(selector);
 const settle = () => new Promise(resolve => setTimeout(resolve, 0));
+const arrow = key => {
+  const event = new Event('keydown', { cancelable: true });
+  Object.defineProperty(event, 'key', { value: key });
+  document.dispatchEvent(event);
+  assert.equal(event.defaultPrevented, true, `${key} should control the walkthrough`);
+};
 
 assert.equal(get('#guidePanel').hidden, false, 'first visit should open the guide');
 assert.match(get('#guideTitle').textContent, /customer promise/);
+assert.equal(document.body.classes.has('guide-open'), true);
 
-get('#guidePrimary').click(); await settle();
+arrow('ArrowRight'); await settle();
 assert.equal(get('#scenarioFault').checked, true);
 assert.match(get('#guideTitle').textContent, /Compare/);
+arrow('ArrowLeft'); await settle();
+assert.match(get('#guideTitle').textContent, /customer promise/);
+arrow('ArrowRight'); await settle();
 
-get('#guidePrimary').click(); await settle();
+arrow('ArrowDown'); await settle();
 assert.match(get('#guideTitle').textContent, /Kane checks/);
 assert.match(get('#guideProof').children[1].textContent, /Control A 100% · Challenger B 40%/);
 
-get('#guideSecondary').click(); await settle();
+arrow('ArrowRight'); await settle();
 assert.match(get('#guideProof').children[0].textContent, /HISTORICAL/);
 assert.match(get('#guideProof').children[1].textContent, /-\$0\.00 · \$189\.00/);
 assert.match(get('#guideCopy').textContent, /not a fresh check/);
 
-get('#guidePrimary').click(); await settle();
+arrow('ArrowRight'); await settle();
 assert.equal(get('#scenarioFault').checked, false);
 assert.match(get('#guideTitle').textContent, /shopper journey again/);
 
-get('#guidePrimary').click(); await settle();
+arrow('ArrowRight'); await settle();
 assert.match(get('#guideProof').children[1].textContent, /Control A 100% · Challenger B 100%/);
 
-get('#guideSecondary').click(); await settle();
+arrow('ArrowRight'); await settle();
 assert.match(get('#guideProof').children[0].textContent, /HISTORICAL/);
 assert.match(get('#guideProof').children[1].textContent, /-\$37\.80 · \$151\.20/);
 
-get('#guidePrimary').click(); await settle();
+arrow('ArrowRight'); await settle();
 assert.equal(get('#guidePanel').hidden, true);
+assert.equal(document.body.classes.has('guide-open'), false);
 assert.equal(localStorage.getItem('k9-guided-demo-v1'), 'seen');
 get('#guideLaunch').click(); await settle();
 assert.equal(get('#guidePanel').hidden, false, 'guided demo must remain reopenable');
-console.log('Guided demo actions, source labels, repair, and restart verified.');
+console.log('Arrow-key walkthrough, safe saved Kane path, repair, and restart verified.');

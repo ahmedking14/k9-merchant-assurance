@@ -71,7 +71,7 @@ function highlight(target) {
   highlighted = document.querySelector(target);
   if (highlighted) {
     highlighted.classList.add('guide-focus');
-    highlighted.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+    highlighted.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' });
   }
 }
 
@@ -103,6 +103,8 @@ function render() {
   const panel = $('#guidePanel');
   panel.hidden = false;
   panel.dataset.side = item.side;
+  document.body.classList.add('guide-open');
+  document.body.dataset.guideSide = item.side;
   $('#guideStep').textContent = `STEP ${stage + 1} OF ${stages.length}`;
   $('#guideTitle').textContent = item.title;
   $('#guideCopy').textContent = item.copy + ([3, 6].includes(stage) && proof?.source === 'saved' ? ' This saved receipt is a historical example, not a fresh check of the current scenario.' : '');
@@ -126,6 +128,7 @@ function render() {
 }
 
 function next() { stage = Math.min(stage + 1, stages.length - 1); render(); }
+function previous() { if (!busy && stage > 0) { stage--; render(); } }
 
 function waitForAction(success, failure, trigger) {
   return new Promise((resolve, reject) => {
@@ -247,6 +250,8 @@ function close() {
   highlighted?.classList.remove('guide-focus');
   highlighted = null;
   $('#guidePanel').hidden = true;
+  document.body.classList.remove('guide-open');
+  delete document.body.dataset.guideSide;
   localStorage.setItem(storageKey, 'seen');
   sessionStorage.removeItem(sessionKey);
   setBusy(false);
@@ -272,7 +277,22 @@ export function initWalkthrough() {
   $('#guideRestart').addEventListener('click', () => open());
   $('#guidePrimary').addEventListener('click', primary);
   $('#guideSecondary').addEventListener('click', secondary);
-  document.addEventListener('keydown', event => { if (active && event.key === 'Escape') close(); });
+  document.addEventListener('keydown', event => {
+    if (!active) return;
+    if (event.key === 'Escape') { close(); return; }
+    if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey || event.repeat) return;
+    const target = event.target;
+    if (target?.isContentEditable || ['INPUT', 'SELECT', 'TEXTAREA'].includes(target?.tagName)) return;
+    if (['ArrowLeft', 'ArrowUp'].includes(event.key)) {
+      event.preventDefault();
+      previous();
+    } else if (['ArrowRight', 'ArrowDown'].includes(event.key)) {
+      event.preventDefault();
+      if (busy) return;
+      if ([2, 5].includes(stage)) secondary();
+      else primary();
+    }
+  });
   try {
     const saved = JSON.parse(sessionStorage.getItem(sessionKey) || 'null');
     if (saved?.active && Number.isInteger(saved.stage) && saved.stage >= 0 && saved.stage < stages.length) {

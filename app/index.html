@@ -20,6 +20,18 @@
     <div class="header-actions"><button class="header-link guide-launch" id="guideLaunch" type="button">Guided demo <span>↗</span></button><a class="header-link" href="/store.html?variant=B" target="_blank" rel="noopener">Open demo store <span>↗</span></a></div>
   </header>
 
+  <aside class="guide-panel" id="guidePanel" data-side="right" aria-labelledby="guideTitle" hidden>
+    <div class="guide-head"><span class="guide-kicker">K9 / GUIDED MERCHANT DEMO</span><button class="guide-close" id="guideClose" type="button" aria-label="Close guided demo">×</button></div>
+    <div class="guide-progress" id="guideProgress" aria-label="Walkthrough progress"></div>
+    <p class="guide-step" id="guideStep">STEP 1 OF 7</p>
+    <h2 id="guideTitle">Start with the customer promise.</h2>
+    <p class="guide-copy" id="guideCopy"></p>
+    <div class="guide-proof" id="guideProof" hidden></div>
+    <p class="guide-status" id="guideStatus" role="status" aria-live="polite"></p>
+    <div class="guide-buttons"><button class="button button-dark" id="guidePrimary" type="button">Continue <span>↗</span></button><button class="button button-light" id="guideSecondary" type="button" hidden>Use saved evidence</button></div>
+    <div class="guide-bottom"><span><kbd>←</kbd><kbd>↑</kbd> Back · <kbd>→</kbd><kbd>↓</kbd> Continue <small>Saved evidence on Kane steps</small></span><button id="guideRestart" type="button">Start over</button></div>
+  </aside>
+
   <main id="top">
     <section class="hero" aria-labelledby="heroTitle">
       <div class="hero-copy"><span class="eyebrow">K9 / ONE COMMERCE PROMISE</span><h1 id="heroTitle">Know if your offer <em>survives the cart.</em></h1><p>Catch a broken customer promise before it costs orders. Compare shopper outcomes, ask Kane to verify the actual browser journey, then act on the evidence.</p><div class="hero-actions"><a class="button button-dark" href="#compare">Start with the shopper <span>↗</span></a><a class="button button-light" href="#report">See Kane’s result <span>↘</span></a></div></div>
@@ -47,17 +59,6 @@
 
     <details class="deep-dive surface" id="telemetryDetails"><summary><span class="eyebrow">OPTIONAL DETAIL</span><strong>Explore the journey data</strong><small>Time ranges, friction spikes, and session order behind the comparison.</small><i>↗</i></summary><div class="deep-dive-body"><div class="analytics-head"><div><span class="eyebrow">LOCAL TELEMETRY</span><h2>Where did the journey break?</h2><p>Simulated claim checks and observed store interactions are labeled separately. Kane evidence remains in the report card above.</p></div><span class="status-chip" id="telemetryStatus">LOADING</span></div><div class="range-controls"><div class="preset-row" aria-label="Report time range"><button data-range="5m">5 min</button><button data-range="1h">1 hour</button><button class="selected" data-range="24h">24 hours</button><button data-range="7d">7 days</button></div><label>Source<select id="reportSource"><option value="all">All telemetry</option><option value="simulated">Simulated shoppers</option><option value="observed_store">Observed store</option></select></label><label>Bucket<select id="reportBucket"><option value="1">1 minute</option><option value="5">5 minutes</option><option value="15">15 minutes</option><option value="60" selected>1 hour</option></select></label><label>From<input id="reportStart" type="datetime-local" step="1" /></label><label>To<input id="reportEnd" type="datetime-local" step="1" /></label><button class="button button-light small" id="applyRange">Apply</button></div><div class="analytics-stats" id="reportStats"></div><div class="analytics-grid"><article class="analytics-card"><div class="analytics-card-head"><div><span class="eyebrow">CHRONOLOGY</span><h3>Friction over time</h3></div><span id="reportWindowLabel"></span></div><div id="timelineBars" class="timeline-bars"></div><div class="chart-key"><span><i class="key-red"></i> Friction</span><span><i class="key-gray"></i> Other events</span></div></article><article class="analytics-card"><span class="eyebrow">MERCHANT BRIEF</span><h3>What needs attention</h3><div id="agentBrief"></div></article></div><div class="analytics-grid"><article class="analytics-card"><span class="eyebrow">HOTSPOTS</span><h3>Most frequent friction</h3><div id="hotspotList" class="dense-list"></div></article><article class="analytics-card"><span class="eyebrow">SESSIONS</span><h3>Open a shopper journey</h3><div id="sessionList" class="dense-list"></div></article></div><article class="analytics-card session-detail"><div class="analytics-card-head"><div><span class="eyebrow">SESSION TIMELINE</span><h3 id="sessionTitle">Select a session</h3></div><span id="sessionMeta"></span></div><div id="sessionTimeline" class="session-timeline">Choose a session above to inspect the exact event order.</div></article></div></details>
   </main>
-  <aside class="guide-panel" id="guidePanel" data-side="right" aria-labelledby="guideTitle" hidden>
-    <div class="guide-head"><span class="guide-kicker">K9 / GUIDED MERCHANT DEMO</span><button class="guide-close" id="guideClose" type="button" aria-label="Close guided demo">×</button></div>
-    <div class="guide-progress" id="guideProgress" aria-label="Walkthrough progress"></div>
-    <p class="guide-step" id="guideStep">STEP 1 OF 7</p>
-    <h2 id="guideTitle">Start with the customer promise.</h2>
-    <p class="guide-copy" id="guideCopy"></p>
-    <div class="guide-proof" id="guideProof" hidden></div>
-    <p class="guide-status" id="guideStatus" role="status" aria-live="polite"></p>
-    <div class="guide-buttons"><button class="button button-dark" id="guidePrimary" type="button">Continue <span>↗</span></button><button class="button button-light" id="guideSecondary" type="button" hidden>Use saved evidence</button></div>
-    <div class="guide-bottom"><span>Actions happen here in the demo store.</span><button id="guideRestart" type="button">Start over</button></div>
-  </aside>
   <footer class="site-footer"><span>K9 / Commerce truth lab</span><span>Local simulation ≠ Kane browser evidence</span><a href="https://www.kaneclihack.sh/" target="_blank" rel="noopener">Kane Hack Day ↗</a></footer>
   <script type="module" src="/app.js"></script>
 </body>
