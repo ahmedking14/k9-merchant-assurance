@@ -23,8 +23,8 @@ function targetName(element){
   if(!target)return '';
   return target.id ? '#'+target.id : target.dataset.add ? `[data-add="${target.dataset.add}"]` : target.getAttribute('href') || target.tagName.toLowerCase();
 }
-function emitTelemetry(eventType,element='',detail=''){
-  const event={sessionId:telemetrySession,source:'observed_store',variant,personaId:'',productId:cartProduct?.id||'',eventType,element,pageUrl:location.pathname+location.search+location.hash,detail,timestamp:new Date().toISOString(),step:telemetryStep++};
+function emitTelemetry(eventType,element='',detail='',value){
+  const event={sessionId:telemetrySession,source:'observed_store',variant,personaId:'',productId:cartProduct?.id||'',eventType,element,pageUrl:location.pathname+location.search+location.hash,detail,...(value===undefined?{}:{value}),timestamp:new Date().toISOString(),step:telemetryStep++};
   fetch('/api/telemetry/events',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({events:[event]}),keepalive:true}).catch(()=>{});
 }
 document.addEventListener('click',event=>{
@@ -79,10 +79,10 @@ function renderCart(){
   $('#cartBody').innerHTML=`<div class="cart-product"><img src="${cartProduct.image}" alt="${cartProduct.name}"/><div><strong>${cartProduct.name}</strong><small>MONOFORM / OBJECTS · QTY 1</small><b>${result.cartPrice!==result.shelfPrice?`<span class="crossed">${money(result.shelfPrice)}</span>`:''}${money(result.cartPrice)}</b><button class="remove-button" id="removeItem">Remove</button></div></div><div class="cart-promises"><div><span>Availability</span><b class="${result.inStock?'':'bad'}">${result.inStock?'In stock':'Sold out'}</b></div><div><span>Warranty at checkout</span><b class="${result.warrantyYears===2?'':'bad'}">${result.warrantyYears} year${result.warrantyYears===1?'':'s'}</b></div><div><span>Returns at checkout</span><b class="${result.returnDays===30?'':'bad'}">${result.returnDays} days</b></div><div><span>Free shipping threshold</span><b class="${result.shippingThreshold===Number(config.freeShipping)?'':'bad'}">${money(result.shippingThreshold)}</b></div></div>`;
   $('#cartFooter').innerHTML=`<div class="cart-line"><span>Subtotal</span><b>${money(result.cartPrice)}</b></div><div class="cart-line ${result.discount===0?'bad':'discount'}"><span>${offerCode} discount ${result.discount===0?'(not applied)':'('+config.discount+'% applied)'}</span><b>-${money(result.discount)}</b></div><div class="cart-line"><span>Shipping</span><b>${result.shipping===0?'FREE':money(result.shipping)}</b></div><div class="cart-total"><span>Total</span><span>${money(result.total)}</span></div><button class="checkout-button" id="checkoutButton" ${result.inStock?'':'disabled'}>${result.inStock?'Place demo order →':'Unavailable'}</button><div class="variant-note">Fictional demo order. No payment information required.</div>`;
   $('#removeItem').addEventListener('click',event=>{event.k9Handled=true;cartProduct=null;renderCart()});
-  $('#checkoutButton').addEventListener('click',event=>{event.k9Handled=true;ordered=true;emitTelemetry('order_placed','#checkoutButton','Fictional demo order completed');renderCart()});
+  $('#checkoutButton').addEventListener('click',event=>{event.k9Handled=true;ordered=true;emitTelemetry('order_placed','#checkoutButton','Fictional demo order completed',result.total);renderCart()});
 }
 
-document.querySelectorAll('[data-add]').forEach(button=>button.addEventListener('click',event=>{event.k9Handled=true;cartProduct=products.find(product=>product.id===button.dataset.add);ordered=false;emitTelemetry('add_to_cart',targetName(button),cartProduct?.name||'');renderCart();openCart()}));
+document.querySelectorAll('[data-add]').forEach(button=>button.addEventListener('click',event=>{event.k9Handled=true;cartProduct=products.find(product=>product.id===button.dataset.add);ordered=false;emitTelemetry('add_to_cart',targetName(button),cartProduct?.name||'',cartOutcome(cartProduct,variant,config).total);renderCart();openCart()}));
 $('#cartButton').addEventListener('click',event=>{event.k9Handled=true;renderCart();openCart()});
 $('#closeCart').addEventListener('click',event=>{event.k9Handled=true;closeCart()});
 $('#scrim').addEventListener('click',closeCart);

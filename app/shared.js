@@ -80,7 +80,7 @@ export function evaluateShopper(persona, product, variant, config){
   const claims=extractClaims(config,variant);
   const printedRate=claims.discountPercent;
   const expectedDiscount=Math.round(outcome.cartPrice*printedRate)/100;
-  if(persona.checks.includes('discountBreak')) checks.push({name:'Promised discount',pass:Math.abs(outcome.discount-expectedDiscount)<0.01,detail:Math.abs(outcome.discount-expectedDiscount)<0.01?`${printedRate}% applied`:`Claimed ${printedRate}%, received ${money(outcome.discount)} off`});
+  if(persona.checks.includes('discountBreak')) checks.push({name:'Promised discount',pass:Math.abs(outcome.discount-expectedDiscount)<0.01,shortfall:Math.max(0,Math.round((expectedDiscount-outcome.discount)*100)/100),detail:Math.abs(outcome.discount-expectedDiscount)<0.01?`${printedRate}% applied`:`Claimed ${printedRate}%, received ${money(outcome.discount)} off`});
   if(persona.checks.includes('couponEligibility') && active.couponEligibility) checks.push({name:'Offer eligibility',pass:outcome.discountEligible,detail:outcome.discountEligible?'Product eligible':'Hidden exclusion'});
   if(persona.checks.includes('dynamicPricing')) checks.push({name:'Price consistency',pass:outcome.cartPrice===outcome.shelfPrice,detail:outcome.cartPrice===outcome.shelfPrice?'Shelf price held':`${money(outcome.shelfPrice)} became ${money(outcome.cartPrice)}`});
   if(persona.checks.includes('shippingThreshold')) checks.push({name:'Free shipping',pass:outcome.shippingThreshold===claims.freeShippingThreshold,detail:outcome.shippingThreshold===claims.freeShippingThreshold?'Threshold held':`Threshold moved to ${money(outcome.shippingThreshold)}`});

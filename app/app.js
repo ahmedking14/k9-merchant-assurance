@@ -22,10 +22,10 @@ function simulationEvents(rows, variant, startedAt) {
     const persona = personas.find(item => item.id === row.personaId);
     const base = Date.parse(startedAt) + index * 180;
     const common = { sessionId, source: 'simulated', variant, personaId: persona?.name || row.personaId, productId: row.productId, pageUrl: `/store.html?variant=${variant}` };
-    const event = (eventType, step, element, detail) => ({ ...common, eventType, step, element, detail, timestamp: new Date(base + step * 30).toISOString() });
-    const events = steps.map((type, step) => event(type, step, ['journey', '#announcement', '#productGrid', '[data-add]', '#cartDrawer'][step], [persona?.goal || '', '20% off first order', product?.name || '', product?.name || '', `Cart total ${money(row.outcome.total)}`][step]));
+    const event = (eventType, step, element, detail, value) => ({ ...common, eventType, step, element, detail, ...(value === undefined ? {} : { value }), timestamp: new Date(base + step * 30).toISOString() });
+    const events = steps.map((type, step) => event(type, step, ['journey', '#announcement', '#productGrid', '[data-add]', '#cartDrawer'][step], [persona?.goal || '', '20% off first order', product?.name || '', product?.name || '', `Cart total ${money(row.outcome.total)}`][step], step >= 3 ? row.outcome.total : undefined));
     const failed = row.checks.filter(check => !check.pass);
-    if (failed.length) events.push(...failed.map((check, offset) => event('claim_mismatch', 5 + offset, '#cartFooter .cart-line', `${check.name}: ${check.detail}`)));
+    if (failed.length) events.push(...failed.map((check, offset) => event('claim_mismatch', 5 + offset, '#cartFooter .cart-line', `${check.name}: ${check.detail}`, check.shortfall || undefined)));
     else events.push(event('claim_match', 5, '#cartFooter', 'Assigned promise checks passed'));
     return events;
   });

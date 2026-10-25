@@ -36,5 +36,6 @@ const range = new URLSearchParams({ startTime: new Date(Date.now() - 60_000).toI
 const report = (await api('/api/reports/friction?' + range)).body;
 assert.equal(report.totalSessions, 1);
 assert.equal(report.counts.claim_mismatch, 1);
+assert.equal(report.metrics.B.brokenPromiseSessions, 1, 'hosted report computes the same merchant metrics');
 assert.equal((await api('/api/reports/session?sessionId=sample-session-123')).body.events.length, 1);
 console.log('Hosted demo scenario, five-slide deck, proof page, local telemetry, and disabled live run verified.');

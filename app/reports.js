@@ -1,3 +1,5 @@
+import { products, money } from './shared.js';
+
 const $ = selector => document.querySelector(selector);
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 const prettyTime = value => new Date(value).toLocaleString([], {month:'short',day:'numeric',hour:'numeric',minute:'2-digit',second:'2-digit'});
@@ -20,20 +22,54 @@ function setWindowInputs(startTime, endTime) {
   $('#reportStart').value = localInput(startTime);
   $('#reportEnd').value = localInput(endTime);
 }
-function stat(label, value, tone = '') {
-  return `<div class="analytics-stat ${tone}"><span>${label}</span><strong>${value}</strong></div>`;
+const percent = value => value === null ? '—' : `${Math.round(value * 100)}%`;
+const cash = value => value === null ? '—' : money(value);
+const share = (part, whole) => whole ? Math.round(part / whole * 100) : 0;
+// Each tile reads metrics.all for the headline and metrics.A / metrics.B for the split.
+function tile(metrics, { label, key, format, hint, empty, bad = () => false }) {
+  const value = metrics.all[key];
+  const unavailable = value === null;
+  return `<div class="jm-tile ${!unavailable && bad(value) ? 'bad' : ''}"><span class="jm-label">${label}</span><strong class="${unavailable ? 'muted' : ''}">${format(value)}</strong><span class="jm-split"><b>A</b> ${format(metrics.A[key])}<b>B</b> ${format(metrics.B[key])}</span><small>${unavailable ? empty : hint}</small></div>`;
+}
+function group(title, caption, tiles) {
+  return `<section class="jm-group"><header><h3>${title}</h3><p>${caption}</p></header><div class="jm-tiles">${tiles.join('')}</div></section>`;
+}
+function renderMetrics(metrics) {
+  const stages = [['Sessions', 'sessions'], ['Added to bag', 'addedToCart'], ['Reached the bag', 'reachedCart'], ['Placed an order', 'ordered']];
+  const funnelBar = (variant, key) => {
+    const funnel = metrics[variant].funnel;
+    const width = share(funnel[key], funnel.sessions);
+    return `<div class="jm-bar ${variant === 'B' ? 'challenger' : ''}"><b>${variant}</b><div><i style="width:${width}%"></i></div><span>${funnel[key]} · ${funnel.sessions ? width + '%' : '—'}</span></div>`;
+  };
+  const funnel = `<article class="analytics-card jm-funnel"><div class="analytics-card-head"><div><span class="eyebrow">SALES FUNNEL</span><h3>Where shoppers drop off</h3></div><span>% of each variant's sessions</span></div>${stages.map(([label, key]) => `<div class="jm-stage"><span>${label}</span><div>${funnelBar('A', key)}${funnelBar('B', key)}</div></div>`).join('')}<p class="report-caveat">Simulated shoppers stop at checkout review, so orders come only from real demo-store sessions.</p></article>`;
+  const adds = metrics.topProducts.reduce((sum, item) => sum + item.sessions, 0);
+  const top = `<article class="analytics-card jm-products"><span class="eyebrow">PRODUCTS</span><h3>Most added to bag</h3>${metrics.topProducts.length ? metrics.topProducts.map(item => `<div class="jm-product"><div><strong>${escapeHtml(products.find(product => product.id === item.productId)?.name || item.productId)}</strong><span>${item.sessions} session${item.sessions === 1 ? '' : 's'} · ${share(item.sessions, adds)}%</span></div><i style="width:${share(item.sessions, adds)}%"></i></div>`).join('') : '<p class="analytics-empty">No products added to a bag in this range.</p>'}</article>`;
+  const needsStore = 'Needs real demo-store sessions. Open the store to record some.';
+  const count = value => String(value);
+  $('#journeyMetrics').innerHTML = `<div class="analytics-grid jm-top">${funnel}${top}</div>` + group('Store performance', 'How well browsing turns into orders.', [
+    tile(metrics, { label: 'Add-to-bag rate', key: 'addToCartRate', format: percent, hint: 'Sessions that put a product in the bag.', empty: 'No sessions in this range.' }),
+    tile(metrics, { label: 'Conversion rate', key: 'conversionRate', format: percent, hint: 'Real store sessions that placed an order.', empty: needsStore }),
+    tile(metrics, { label: 'Cart abandonment', key: 'cartAbandonmentRate', format: percent, hint: 'Bags started in the real store that never became an order.', empty: needsStore }),
+    tile(metrics, { label: 'Average bag total', key: 'averageCartValue', format: cash, hint: 'What shoppers would pay, after discount and shipping.', empty: 'No bag totals recorded in this range.' }),
+    tile(metrics, { label: 'Average order value', key: 'averageOrderValue', format: cash, hint: 'Mean total of placed demo orders.', empty: needsStore }),
+    tile(metrics, { label: 'Demo order revenue', key: 'revenue', format: cash, hint: 'Sum of placed demo orders. No payment is taken.', empty: needsStore })
+  ]) + `<div class="jm-pair">` + group('Offer integrity', 'Did the advertised promise survive to the bag?', [
+    tile(metrics, { label: 'Promise kept', key: 'promiseKeptRate', format: percent, hint: 'Checked journeys where every advertised promise held.', empty: 'Run a comparison to check promises.', bad: value => value < 1 }),
+    tile(metrics, { label: 'Shoppers let down', key: 'brokenPromiseSessions', format: count, hint: 'Journeys that hit at least one broken promise.', empty: '', bad: value => value > 0 }),
+    tile(metrics, { label: 'Discount owed, not given', key: 'discountShortfall', format: cash, hint: 'Promised discount minus the discount the bag applied.', empty: '', bad: value => value > 0 })
+  ]) + group('Friction', 'Signs real shoppers struggled with the page.', [
+    tile(metrics, { label: 'Sessions with friction', key: 'frictionSessionRate', format: percent, hint: 'Real store sessions with a dead click, rage click, or frantic scroll.', empty: needsStore, bad: value => value > 0 }),
+    tile(metrics, { label: 'Dead clicks', key: 'deadClicks', format: count, hint: 'Clicks that changed nothing on the page.', empty: '', bad: value => value > 0 }),
+    tile(metrics, { label: 'Rage clicks', key: 'rageClicks', format: count, hint: 'Three fast clicks on the same target.', empty: '', bad: value => value > 0 }),
+    tile(metrics, { label: 'Frantic scrolling', key: 'excessiveScrolls', format: count, hint: 'More than 1,800 px scrolled in five seconds.', empty: '', bad: value => value > 0 })
+  ]) + `</div>`;
 }
 function renderReport(report) {
   const counts = report.counts;
   const friction = (counts.claim_mismatch || 0) + (counts.dead_click || 0) + (counts.rage_click || 0) + (counts.excessive_scroll || 0);
   $('#telemetryStatus').textContent = `${report.totalEvents} EVENT${report.totalEvents === 1 ? '' : 'S'}`;
   $('#reportWindowLabel').textContent = `${prettyTime(report.startTime)} — ${prettyTime(report.endTime)}`;
-  $('#reportStats').innerHTML = [
-    stat('SESSIONS', report.totalSessions), stat('CLAIM MISMATCHES', counts.claim_mismatch || 0, counts.claim_mismatch ? 'warning' : ''),
-    stat('DEAD CLICKS', counts.dead_click || 0, counts.dead_click ? 'warning' : ''),
-    stat('RAGE CLICKS', counts.rage_click || 0, counts.rage_click ? 'warning' : ''),
-    stat('EXCESSIVE SCROLL', counts.excessive_scroll || 0, counts.excessive_scroll ? 'warning' : '')
-  ].join('');
+  renderMetrics(report.metrics);
   if (!report.buckets.length) $('#timelineBars').innerHTML = '<p class="analytics-empty">No telemetry in this time window. Run a comparison or use the demo store.</p>';
   else {
     const buckets = report.buckets.slice(-36);

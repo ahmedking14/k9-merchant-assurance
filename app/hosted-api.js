@@ -1,3 +1,5 @@
+import { journeyMetrics } from './journey-metrics.js';
+
 const originalFetch = window.fetch.bind(window);
 const scenarioKey = 'k9-hosted-scenario-v1';
 const telemetryKey = 'k9-hosted-telemetry-v1';
@@ -55,7 +57,7 @@ function report(url) {
       const hot = hotspots.get(key); hot.count++; hot.lastSeen = row.timestamp;
     }
   }
-  return { startTime, endTime, source, bucketMinutes, totalEvents: filtered.length, totalSessions: sessions.size, counts,
+  return { startTime, endTime, source, bucketMinutes, totalEvents: filtered.length, totalSessions: sessions.size, counts, metrics: journeyMetrics(filtered),
     buckets: [...buckets.values()].sort((a, b) => a.startTime.localeCompare(b.startTime)),
     hotspots: [...hotspots.values()].sort((a, b) => b.count - a.count).slice(0, 20),
     sessions: [...sessions.values()].sort((a, b) => b.startTime.localeCompare(a.startTime) || b.frictionCount - a.frictionCount).slice(0, 100) };

@@ -1,5 +1,6 @@
 import { appendFile, mkdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
+import { journeyMetrics } from './app/journey-metrics.js';
 
 const eventTypes = new Set([
   'session_start', 'claim_view', 'product_view', 'add_to_cart', 'checkout_review',
@@ -30,7 +31,8 @@ function normalizeEvent(input) {
     pageUrl: clean(input.pageUrl, 300),
     detail: clean(input.detail, 300),
     timestamp: input.timestamp,
-    step: Number.isInteger(input.step) && input.step >= 0 ? input.step : 0
+    step: Number.isInteger(input.step) && input.step >= 0 ? input.step : 0,
+    ...(Number.isFinite(input.value) && input.value >= 0 && input.value < 1e6 ? { value: Math.round(input.value * 100) / 100 } : {})
   };
 }
 function bucketStart(timestamp, bucketMinutes) {
@@ -102,7 +104,7 @@ export function createTelemetryStore(file) {
     }
     return {
       startTime, endTime, source, bucketMinutes, totalEvents: rows.length, totalSessions: sessions.size,
-      counts, buckets: [...buckets.values()].sort((a, b) => a.startTime.localeCompare(b.startTime)),
+      counts, metrics: journeyMetrics(rows), buckets: [...buckets.values()].sort((a, b) => a.startTime.localeCompare(b.startTime)),
       hotspots: [...hotspots.values()].sort((a, b) => b.count - a.count).slice(0, 20),
       sessions: [...sessions.values()].sort((a, b) => b.startTime.localeCompare(a.startTime) || b.frictionCount - a.frictionCount).slice(0, 100)
     };
