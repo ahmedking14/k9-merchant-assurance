@@ -2,7 +2,7 @@
 
 A Kane CLI Hack Day project: simulated shoppers challenge a specific storefront promise, and Kane can verify the real browser journey.
 
-[Live merchant cockpit](https://k9-merchant-assurance.vercel.app/) · [Visual proof trail](https://k9-merchant-assurance.vercel.app/proof.html)
+[Live merchant cockpit](https://k9-merchant-assurance.vercel.app/) · [Five-slide deck](https://k9-merchant-assurance.vercel.app/deck.html) · [Visual proof trail](https://k9-merchant-assurance.vercel.app/proof.html)
 
 ## Judging proof at a glance
 

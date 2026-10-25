@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#f3f4f5" />
+  <meta name="description" content="K9 Merchant Assurance in five slides: problem, build, Kane in the loop, demo, and next steps." />
+  <title>K9 — Five-slide overview</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800;900&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/deck.css" />
+</head>
+<body>
+  <header class="deck-header">
+    <a class="deck-brand" href="/" aria-label="K9 merchant cockpit"><span class="brand-star">✦</span><span>K9 <small>MERCHANT ASSURANCE</small></span></a>
+    <span class="deck-label">THE FIVE-SLIDE OVERVIEW</span>
+    <a class="header-link" href="/proof.html">Inspect proof ↗</a>
+  </header>
+
+  <main class="deck" id="deck" aria-label="K9 presentation">
+    <section class="slide is-active" id="problem" aria-labelledby="problem-title" aria-hidden="false">
+      <div class="slide-copy"><span class="eyebrow">01 / PROBLEM</span><h1 id="problem-title">The offer says 20% off.<br><em>The cart says otherwise.</em></h1><p>Merchants ship storefront changes faster than they can verify every shopper journey. A banner can promise a discount while the actual bag silently charges full price.</p><div class="slide-claim"><span>FIRST ORDER / HALO HEADPHONES</span><strong>$189.00 <i>→</i> $151.20</strong><small>The price a first-time shopper should see after 20% off.</small></div></div><div class="slide-aside problem-mark" aria-hidden="true"><span>THE CUSTOMER PROMISE</span><b>20<small>%</small></b><span>CAN FAIL IN THE CART</span></div>
+    </section>
+
+    <section class="slide" id="build" aria-labelledby="build-title" aria-hidden="true" hidden>
+      <div class="slide-copy"><span class="eyebrow">02 / BUILD</span><h2 id="build-title">One merchant decision.<br><em>One clear path.</em></h2><p>K9 compares the same first-order goal across control A and challenger B, then asks Kane to verify the real browser cart before the merchant acts.</p><div class="flow" aria-label="K9 workflow"><div><b>01</b><strong>Define claim</strong><small>20% off first order</small></div><i>→</i><div><b>02</b><strong>Compare shoppers</strong><small>A versus B simulation</small></div><i>→</i><div><b>03</b><strong>Verify with Kane</strong><small>Real Chrome cart</small></div><i>→</i><div><b>04</b><strong>Decide</strong><small>Fix or keep</small></div></div><p class="slide-note">Simulation is a signal. Kane’s browser result is the proof.</p></div>
+    </section>
+
+    <section class="slide" id="kane" aria-labelledby="kane-title" aria-hidden="true" hidden>
+      <div class="slide-copy"><span class="eyebrow">03 / KANE IN THE LOOP</span><h2 id="kane-title">Kane reads what<br><em>the shopper sees.</em></h2><p>The coding agent used Kane to generate a cart test, reviewed its assertions, ran it, read the failure, repaired the store, and replayed the same test.</p><ol class="kane-sequence"><li><b>DESIGN</b><span>Approve generated <code>_test.md</code> for the discount journey</span></li><li><b>RUN</b><span>Check the displayed discount line and cart total in Chrome</span></li><li><b>ACT</b><span>Use the sealed evidence pack to guide and verify the repair</span></li></ol><a class="inline-link" href="https://github.com/ahmedking14/k9-merchant-assurance/tree/main/.testmuai/tests" target="_blank" rel="noopener noreferrer">See the generated tests ↗</a></div><aside class="command-panel"><span>REPLAY THE APPROVED SUITE</span><code>npm run dev<br>npm run kane:ci</code><p>The CLI returns NDJSON results and a sealed evidence pack. The repo contains the reviewed tests and archived packs.</p><a href="https://github.com/ahmedking14/k9-merchant-assurance/tree/main/evidence" target="_blank" rel="noopener noreferrer">View evidence packs ↗</a></aside>
+    </section>
+
+    <section class="slide" id="demo" aria-labelledby="demo-title" aria-hidden="true" hidden>
+      <div class="slide-copy"><span class="eyebrow">04 / DEMO</span><h2 id="demo-title">Red run.<br><em>Repair. Green rerun.</em></h2><p>The reviewed challenger test found the offer missing from the bag. After the fix, the same test saw the correct discount and total. A later two-test suite passed for challenger and control.</p><div class="demo-actions"><a href="/" class="primary-link">Open live demo ↗</a><a href="/proof.html" class="secondary-link">See full proof trail ↗</a></div></div><div class="evidence-pair" aria-label="Before and after Kane screenshots"><figure><div class="evidence-image"><img src="/proof-assets/kane-red-cart.jpg" alt="Kane screenshot of failed challenger bag: discount zero dollars, total 189 dollars" /></div><figcaption><span class="evidence-status failed">FAILED</span><strong>−$0.00</strong><small>$189.00 total</small></figcaption></figure><figure><div class="evidence-image"><img src="/proof-assets/kane-green-cart.jpg" alt="Kane screenshot of passing challenger bag: discount 37 dollars and 80 cents, total 151 dollars and 20 cents" /></div><figcaption><span class="evidence-status passed">PASSED</span><strong>−$37.80</strong><small>$151.20 total</small></figcaption></figure></div>
+    </section>
+
+    <section class="slide" id="next" aria-labelledby="next-title" aria-hidden="true" hidden>
+      <div class="slide-copy"><span class="eyebrow">05 / WHAT IS NEXT</span><h2 id="next-title">Turn a proven journey<br><em>into a release habit.</em></h2><p>The focused discount journey is verified. Next, connect Kane credentials to CI, require the suite check on pull requests, and expand coverage to more commerce promises.</p><div class="next-steps"><div><b>01</b><span>Configure Kane GitHub secrets</span></div><div><b>02</b><span>Require the Kane cart suite check</span></div><div><b>03</b><span>Add checkout, inventory, and more variant journeys</span></div></div><p class="slide-note">Current proof: same challenger test failed, then passed; control and challenger suite passed 2/2. The CI merge rule is not active yet.</p><div class="demo-actions"><a href="/" class="primary-link">Try the app ↗</a><a href="https://github.com/ahmedking14/k9-merchant-assurance" target="_blank" rel="noopener noreferrer" class="secondary-link">Open repository ↗</a></div></div>
+    </section>
+  </main>
+
+  <footer class="deck-footer"><nav aria-label="Slides" id="slideNav"><button class="is-current" data-slide="0" aria-label="Slide 1: Problem" aria-current="step">Problem</button><button data-slide="1" aria-label="Slide 2: Build">Build</button><button data-slide="2" aria-label="Slide 3: Kane in the loop">Kane in the loop</button><button data-slide="3" aria-label="Slide 4: Demo">Demo</button><button data-slide="4" aria-label="Slide 5: What is next">What is next</button></nav><div class="deck-controls"><span id="slideCount">01 / 05</span><button type="button" id="previousSlide" aria-label="Previous slide">←</button><button type="button" id="nextSlide" aria-label="Next slide">→</button></div></footer>
+  <script type="module" src="/deck.js"></script>
+</body>
+</html>
