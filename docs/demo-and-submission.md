@@ -13,7 +13,7 @@ Do not call local simulator output Kane evidence. The real Kane run and sealed p
 
 ## Proof to collect
 
-- A repository accessible to judges containing today's code, README, runnable command, requirements, and the exact final commit SHA. The repository is currently private; grant access or publish it before submission.
+- A repository accessible to judges containing today's code, README, runnable command, requirements, and the exact final commit SHA. The repository is public, so judges can inspect the code and evidence without access requests.
 - A live URL or a run command that works on a fresh machine.
 - Failed and passing Kane proof, including the three reviewed packs now committed in `evidence/`. Future raw packs need inspection before sharing because network logs may contain secrets. Attach the required pack through the event submission flow.
 - A short explanation of the OpenAI component and the exact point where Kane caused the agent to change code.

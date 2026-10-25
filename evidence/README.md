@@ -2,7 +2,7 @@
 
 These three original, sealed Kane CLI packs were copied from the runs after checking their text entries for credentials. They are committed with the generated tests and receipts so the proof survives a fresh clone. Each pack passed `kane-cli evidence validate <path> --json`.
 
-They include Kane account metadata, including an email address. The repository is private; do not publish these raw packs without reviewing and removing that metadata or deciding to disclose it.
+These original packs include Kane account metadata, including an email address. They are committed as public, unmodified proof; review that metadata before redistributing the files.
 
 | Run | Outcome | Pack | SHA-256 |
 | --- | --- | --- | --- |

@@ -58,6 +58,6 @@ For CI, add repository secrets `KANE_USERNAME` and `KANE_ACCESS_KEY`, then requi
 
 ## Hosted demo
 
-`vercel.json` builds a static deployment with a browser-local scenario and telemetry store. The Vercel site supports the A/B comparison, storefront, guided walkthrough, time-range report, and clearly marked archived Kane receipts. The separate proof page shows screenshots from the failed and passing packs. Full packs stay in the private repository because they include account metadata. Fresh Kane CLI runs, new evidence packs, and OpenAI triage require the local Node app and its configured credentials; the hosted site disables those actions rather than claiming a fresh verification.
+`vercel.json` builds a static deployment with a browser-local scenario and telemetry store. The Vercel site supports the A/B comparison, storefront, guided walkthrough, time-range report, and clearly marked archived Kane receipts. The separate proof page shows screenshots from the failed and passing packs. Full packs are committed in the public repository and include Kane account metadata; the hosted site serves only the proof screenshots. Fresh Kane CLI runs, new evidence packs, and OpenAI triage require the local Node app and its configured credentials; the hosted site disables those actions rather than claiming a fresh verification.
 
 The storefront and control room use real stock photographs from Unsplash as fictional demo imagery under the [Unsplash License](https://unsplash.com/license). Products and brand are invented; no purchases or payments occur.
